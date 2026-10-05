@@ -67,11 +67,23 @@ Open **http://localhost:3000** in your browser and log in.
 | Pairs | Create PAIR-001, PAIR-002 and so on. Each pair shows its eggs, pisâ and hatch rate. |
 | Hatch records | Record the eggs. The expected hatch date is worked out for you. Record the hatch and the rate is calculated. Then register the chicks and both parents are linked automatically. |
 | Incubator | Capacity, eggs used, space left, and the batches inside. |
+| Training | Log workouts, weigh-ins and condition for one bird or many at once. See which tandang have not trained this week. |
+| Derbies | Add a derby, record each fight with its result, then upload the video and write what went well and what to improve. |
+| Fight review | Watch the video, pause, and add timed notes (Good moment, Needs work, Note). Tap a note's time to jump to that moment. |
 | Sales | Record a sale and the bird becomes **Sold**. Delete the sale and the bird goes back to **Active**. |
 | Expenses | Feed, vitamins, medicine, veterinary, equipment and more. |
 | Reports | Breeding, bird, sales and expense reports and a financial summary for this week, this month, this year, all time or your own dates. |
 | Users | Admin only. Add users, reset passwords, change roles, remove users. |
 | Settings | Farm name, incubation days (default 21), bloodline suggestions, and backup downloads. |
+
+### Training, derbies and videos
+
+If you set up the database before this feature, run `supabase/add-training-derbies.sql` once in the Supabase SQL Editor. New setups already get it from `schema.sql`.
+
+- **Video size limit:** the free Supabase plan accepts files up to **50 MB**. A phone video of a whole fight can be bigger, so trim each fight into its own clip. Or paste a Facebook or YouTube link when you edit the fight.
+- **Bigger videos:** on a paid Supabase plan you can raise the file size limit in Supabase (Storage settings). Then add `MAX_VIDEO_MB=200` (or your number) to your `.env` or to Render's environment variables.
+- **Privacy:** derby videos are private. The app makes a short-lived link only while you watch.
+- **Deleting a fight or derby** also deletes its uploaded videos.
 
 ### Good to know
 - **Birds are never lost by accident.** A bird that has chicks, pairs or a sale cannot be deleted. Set it to **Deceased** or **Culled** instead, so the family history stays.

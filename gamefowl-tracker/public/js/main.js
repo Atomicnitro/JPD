@@ -50,10 +50,17 @@
     ['pairs', '#/pairs', 'pairs', 'Pairs'],
     ['hatch', '#/hatch', 'egg', 'Hatch records'],
     ['incubator', '#/incubator', 'incubator', 'Incubator'],
+    ['training', '#/training', 'dumbbell', 'Training'],
+    ['derbies', '#/derbies', 'trophy', 'Derbies'],
     ['sales', '#/sales', 'tag', 'Sales'],
     ['expenses', '#/expenses', 'wallet', 'Expenses'],
     ['reports', '#/reports', 'chart', 'Reports'],
   ];
+
+  function updateSide() {
+    const el = $('#sideToday');
+    if (el) el.innerHTML = GT.sideToday();
+  }
 
   function renderShell() {
     const admin = S.user && S.user.role === 'admin';
@@ -68,9 +75,15 @@
           ${admin ? `<a href="#/users" data-nav="users">${icon('users')}Users</a>` : ''}
           <a href="#/settings" data-nav="settings">${icon('gear')}Settings</a>
         </nav>
-        <div class="side-foot"><div class="who">${esc(S.user.name || S.user.email)}</div><div class="role">${admin ? 'Admin' : 'Staff'}</div>
-          <button class="btn sm dark" data-act="logout">${icon('logout')}Log out</button>
-          <p class="side-credit">Created by<br><b>Juan Paolo Dente</b></p></div>
+        <div class="side-fill">
+          <div class="side-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="${GT.ROOSTER_PATH}" fill="currentColor" fill-rule="evenodd"/></svg></div>
+          <div class="side-today" id="sideToday"></div>
+        </div>
+        <div class="side-foot">
+          <div class="side-user"><div><div class="who">${esc(S.user.name || S.user.email)}</div><div class="role">${admin ? 'Admin' : 'Staff'}</div></div>
+            <button class="btn sm dark" data-act="logout">${icon('logout')}Log out</button></div>
+          <p class="side-credit">Created by <b>Juan Paolo Dente</b></p>
+        </div>
       </aside>
       <main class="main" id="main">
         <div class="mtop"><span class="brand-logo"><img src="/assets/logo-128.png" alt=""></span><b>Gamefowl Tracker</b></div>
@@ -95,6 +108,10 @@
     [/^\/pairs\/([^/]+)$/, 'pair'],
     [/^\/hatch$/, 'hatch'],
     [/^\/incubator$/, 'incubator'],
+    [/^\/training$/, 'training'],
+    [/^\/derbies$/, 'derbies'],
+    [/^\/derbies\/([^/]+)$/, 'derby'],
+    [/^\/fights\/([^/]+)$/, 'fight'],
     [/^\/sales$/, 'sales'],
     [/^\/expenses$/, 'expenses'],
     [/^\/reports$/, 'reports'],
@@ -105,7 +122,7 @@
   const TAB_OF = {
     home: 'home', birds: 'birds', bird: 'birds', pairs: 'pairs', pair: 'pairs', hatch: 'hatch',
   };
-  const NAV_OF = { bird: 'birds', pair: 'pairs' };
+  const NAV_OF = { bird: 'birds', pair: 'pairs', derby: 'derbies', fight: 'derbies' };
 
   function current() {
     const raw = location.hash.slice(1) || '/';
@@ -123,6 +140,8 @@
     if (name === 'birds') S.filters.sex = q.sex || '';
 
     $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === (NAV_OF[name] || name)));
+    const sub = $('.nav .sub');
+    if (sub) sub.classList.toggle('open', name === 'birds' || name === 'bird');
     $$('[data-sub]').forEach((a) => a.classList.toggle('on', name === 'birds' && a.dataset.sub === S.filters.sex));
     $$('[data-tab]').forEach((a) => a.classList.toggle('on', a.dataset.tab === (TAB_OF[name] || 'more')));
 
@@ -136,6 +155,7 @@
     if (my !== token) return;
     const view = $('#view');
     view.innerHTML = html;
+    updateSide();
     if (!GT.keepScroll) window.scrollTo(0, 0);
     GT.keepScroll = false;
   };
@@ -148,6 +168,7 @@
   function startApp() {
     renderShell();
     baseRender();
+    GT.api('/videos/limit').then((r) => { GT.videoMB = r.mb; }).catch(() => {});
   }
 
   /* ---------- Start ---------- */

@@ -110,16 +110,20 @@ app.post('/api/refresh', wrap(async (req, res) => {
 /* ------------------------------------------------------------------ */
 
 app.get('/api/data', auth, wrap(async (req, res) => {
-  const [birds, pairs, batches, sales, expenses, incubators, settings] = await Promise.all([
+  const [birds, pairs, batches, sales, expenses, incubators, training, derbies, fights, vnotes, settings] = await Promise.all([
     fetchAll('birds', 'band_id'),
     fetchAll('pairs', 'pair_no'),
     fetchAll('batches', 'batch_no'),
     fetchAll('sales', 'date_sold'),
     fetchAll('expenses', 'date'),
     fetchAll('incubators', 'created_at'),
+    fetchAll('training_sessions', 'date'),
+    fetchAll('derbies', 'date'),
+    fetchAll('derby_fights', 'created_at'),
+    fetchAll('video_notes', 'created_at'),
     getSettings(),
   ]);
-  res.json({ me: publicUser(req.user), birds, pairs, batches, sales, expenses, incubators, settings });
+  res.json({ me: publicUser(req.user), birds, pairs, batches, sales, expenses, incubators, training, derbies, fights, vnotes, settings });
 }));
 
 /* ------------------------------------------------------------------ */
@@ -184,6 +188,40 @@ const RESOURCES = {
     cols: ['name', 'capacity', 'notes'],
     required: { name: 'Name', capacity: 'Capacity' },
   },
+  training: {
+    table: 'training_sessions',
+    cols: ['bird_id', 'date', 'type', 'duration_min', 'weight_g', 'condition_score', 'notes'],
+    required: { bird_id: 'Bird', date: 'Date', type: 'Type of training' },
+  },
+  derbies: {
+    cols: ['name', 'date', 'venue', 'notes'],
+    required: { name: 'Derby name', date: 'Date' },
+    // Remove the video files of every fight in this derby once it is deleted.
+    async filesToRemove(id) {
+      const { data } = await db.from('derby_fights').select('video_path').eq('derby_id', id);
+      return (data || []).map((f) => f.video_path).filter(Boolean);
+    },
+  },
+  fights: {
+    table: 'derby_fights',
+    cols: ['derby_id', 'bird_id', 'fight_no', 'result', 'weight_g', 'strengths', 'improvements', 'video_path', 'video_url', 'notes'],
+    required: { derby_id: 'Derby', bird_id: 'Bird', result: 'Result' },
+    async prepare(row, existing) {
+      // Replacing or removing the video deletes the old file.
+      if (existing && 'video_path' in row && existing.video_path && row.video_path !== existing.video_path) {
+        await removeVideos([existing.video_path]);
+      }
+    },
+    async filesToRemove(id) {
+      const { data } = await db.from('derby_fights').select('video_path').eq('id', id).maybeSingle();
+      return data && data.video_path ? [data.video_path] : [];
+    },
+  },
+  vnotes: {
+    table: 'video_notes',
+    cols: ['fight_id', 'at_seconds', 'kind', 'note'],
+    required: { fight_id: 'Fight', at_seconds: 'Time', note: 'Note' },
+  },
 };
 
 function cleanRow(cfg, body) {
@@ -197,11 +235,11 @@ function cleanRow(cfg, body) {
   return out;
 }
 
-const RES_PATH = '/api/:res(birds|pairs|batches|sales|expenses|incubators)';
+const RES_PATH = '/api/:res(birds|pairs|batches|sales|expenses|incubators|training|derbies|fights|vnotes)';
 
 app.post(RES_PATH, auth, wrap(async (req, res) => {
-  const table = req.params.res;
-  const cfg = RESOURCES[table];
+  const cfg = RESOURCES[req.params.res];
+  const table = cfg.table || req.params.res;
   const row = cleanRow(cfg, req.body);
   for (const [col, label] of Object.entries(cfg.required)) {
     if (row[col] === null || row[col] === undefined) throw fail(400, `${label} is required.`);
@@ -215,8 +253,8 @@ app.post(RES_PATH, auth, wrap(async (req, res) => {
 }));
 
 app.patch(`${RES_PATH}/:id`, auth, wrap(async (req, res) => {
-  const table = req.params.res;
-  const cfg = RESOURCES[table];
+  const cfg = RESOURCES[req.params.res];
+  const table = cfg.table || req.params.res;
   const row = cleanRow(cfg, req.body);
   for (const [col, label] of Object.entries(cfg.required)) {
     if (col in row && row[col] === null) throw fail(400, `${label} is required.`);
@@ -231,8 +269,11 @@ app.patch(`${RES_PATH}/:id`, auth, wrap(async (req, res) => {
 }));
 
 app.delete(`${RES_PATH}/:id`, auth, wrap(async (req, res) => {
-  const { error } = await db.from(req.params.res).delete().eq('id', req.params.id);
+  const cfg = RESOURCES[req.params.res];
+  const files = cfg.filesToRemove ? await cfg.filesToRemove(req.params.id) : [];
+  const { error } = await db.from(cfg.table || req.params.res).delete().eq('id', req.params.id);
   if (error) throw error;
+  if (files.length) await removeVideos(files);
   res.json({ ok: true });
 }));
 
@@ -290,6 +331,47 @@ app.post('/api/photos', auth, wrap(async (req, res) => {
   if (error) throw error;
   const { data } = db.storage.from('bird-photos').getPublicUrl(name);
   res.json({ url: data.publicUrl });
+}));
+
+/* ------------------------------------------------------------------ */
+/* Derby videos (private bucket, short-lived watch links)              */
+/* ------------------------------------------------------------------ */
+
+const MAX_VIDEO_MB = Number(process.env.MAX_VIDEO_MB) || 50;
+const VIDEO_TYPES = {
+  'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm',
+  'video/x-m4v': 'm4v', 'video/3gpp': '3gp', 'video/x-matroska': 'mkv',
+};
+
+async function removeVideos(paths) {
+  const list = paths.filter(Boolean);
+  if (list.length) await db.storage.from('derby-videos').remove(list);
+}
+
+app.get('/api/videos/limit', auth, (req, res) => res.json({ mb: MAX_VIDEO_MB }));
+
+app.put('/api/videos', auth, express.raw({ type: () => true, limit: `${MAX_VIDEO_MB}mb` }), wrap(async (req, res) => {
+  const type = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+  const ext = VIDEO_TYPES[type];
+  if (!ext) throw fail(400, 'Please choose a video file (MP4, MOV or WebM).');
+  if (!Buffer.isBuffer(req.body) || !req.body.length) throw fail(400, 'No video was received.');
+  const name = `${crypto.randomUUID()}.${ext}`;
+  const { error } = await db.storage.from('derby-videos').upload(name, req.body, { contentType: type });
+  if (error) {
+    if (/exceeded|too large|size/i.test(error.message || '')) {
+      throw fail(400, 'Supabase rejected the file because it is too big. Trim the clip or paste a link instead.');
+    }
+    throw error;
+  }
+  res.json({ path: name });
+}));
+
+app.get('/api/videos/url', auth, wrap(async (req, res) => {
+  const p = String(req.query.path || '');
+  if (!/^[\w-]+\.\w+$/.test(p)) throw fail(400, 'Bad video path.');
+  const { data, error } = await db.storage.from('derby-videos').createSignedUrl(p, 3600);
+  if (error) throw error;
+  res.json({ url: data.signedUrl });
 }));
 
 /* ------------------------------------------------------------------ */
@@ -372,6 +454,7 @@ app.delete('/api/users/:id', auth, adminOnly, wrap(async (req, res) => {
 const TABLES = [
   ['birds', 'band_id'], ['pairs', 'pair_no'], ['batches', 'batch_no'],
   ['sales', 'date_sold'], ['expenses', 'date'], ['incubators', 'created_at'],
+  ['training_sessions', 'date'], ['derbies', 'date'], ['derby_fights', 'created_at'], ['video_notes', 'created_at'],
 ];
 
 // Replace internal ids with readable names (band IDs, PAIR-001, ...)
@@ -380,6 +463,8 @@ function readable(all) {
   const pair = Object.fromEntries(all.pairs.map((p) => [p.id, `PAIR-${pad3(p.pair_no)}`]));
   const batch = Object.fromEntries(all.batches.map((b) => [b.id, `BATCH-${pad3(b.batch_no)}`]));
   const incub = Object.fromEntries(all.incubators.map((i) => [i.id, i.name]));
+  const derby = Object.fromEntries(all.derbies.map((d) => [d.id, d.name]));
+  const fight = Object.fromEntries(all.derby_fights.map((f) => [f.id, `${derby[f.derby_id] || ''} ${f.fight_no || ''}`.trim()]));
   const drop = new Set(['id', 'created_at']);
   const out = {};
   for (const [table, rows] of Object.entries(all)) {
@@ -395,6 +480,8 @@ function readable(all) {
         else if (k === 'pair_id') o.pair = pair[v] || '';
         else if (k === 'batch_id') o.batch = batch[v] || '';
         else if (k === 'incubator_id') o.incubator = incub[v] || '';
+        else if (k === 'derby_id') o.derby = derby[v] || '';
+        else if (k === 'fight_id') o.fight = fight[v] || '';
         else if (k === 'pair_no') o.pair_id = `PAIR-${pad3(v)}`;
         else if (k === 'batch_no') o.batch_id = `BATCH-${pad3(v)}`;
         else o[k] = v ?? '';
@@ -459,6 +546,10 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   let status = err.status || 500;
   let message = err.message || 'Something went wrong.';
   const text = `${err.message || ''} ${err.details || ''}`;
+  if (err.status === 413 || err.type === 'entity.too.large') {
+    status = 413;
+    message = `That file is too big. The limit is ${MAX_VIDEO_MB} MB. Trim the clip or paste a link instead.`;
+  }
   if (err.code === '23505') {
     status = 400;
     message = /band_id/.test(text) ? 'That Band ID is already used by another bird.' : 'That record already exists.';

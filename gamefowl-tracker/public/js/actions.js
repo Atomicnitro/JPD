@@ -317,6 +317,221 @@
   ACT.editExpense = (id) => expenseForm(S.data.expenses.find((x) => x.id === id));
   ACT.deleteExpense = (id) => remove('/expenses/' + id, 'Delete this expense?', 'This cannot be undone.', 'Expense deleted.');
 
+  /* ---------- Training ---------- */
+  const trainable = (keep) =>
+    S.data.birds
+      .filter((b) => b.sex !== 'sisiw' && (b.status === 'active' || b.id === keep))
+      .sort((a, b) => (a.sex === b.sex ? 0 : a.sex === 'tandang' ? -1 : 1) || GT.byBand(a, b))
+      .map((b) => ({ v: b.id, l: GT.birdLabel(b) }));
+
+  function trainingForm(t, birdId) {
+    const edit = !!t;
+    const birds = trainable(t && t.bird_id);
+    if (!birds.length) return toast('Add an active tandang first.', 'err');
+    openForm({
+      title: edit ? 'Edit training' : 'Log training',
+      submit: edit ? 'Save changes' : 'Save training',
+      values: t || { date: today(), type: GT.TRAIN_TYPES[0], bird_ids: birdId ? [birdId] : [] },
+      fields: [
+        edit ? { name: 'bird_id', label: 'Bird', type: 'select', required: true, options: birds }
+          : { name: 'bird_ids', label: 'Birds (pick one or many)', type: 'checks', required: true, options: birds },
+        { name: 'date', label: 'Date', type: 'date', required: true, w: 'half' },
+        { name: 'type', label: 'Type', type: 'select', required: true, options: GT.TRAIN_TYPES.map((x) => ({ v: x, l: x })), w: 'half' },
+        { name: 'duration_min', label: 'Minutes', type: 'number', step: 1, w: 'half' },
+        { name: 'weight_g', label: 'Weight (grams)', type: 'number', w: 'half', help: edit ? '' : 'Only when logging one bird.' },
+        { name: 'condition_score', label: 'Condition', type: 'select', blank: 'Not rated', options: [1, 2, 3, 4, 5].map((n) => ({ v: n, l: GT.CONDITION[n] })) },
+        { name: 'notes', label: 'Notes', type: 'textarea' },
+      ],
+      onSubmit: async (v) => {
+        if (edit) return save('PATCH', '/training/' + t.id, v);
+        const ids = [].concat(v.bird_ids || []);
+        if (ids.length > 1 && v.weight_g) throw new Error('Weight is for one bird at a time. Log weigh-ins separately.');
+        for (const id of ids) {
+          await api('/training', { method: 'POST', body: { bird_id: id, date: v.date, type: v.type, duration_min: v.duration_min, weight_g: v.weight_g, condition_score: v.condition_score, notes: v.notes } });
+        }
+        await GT.load();
+        return ids.length;
+      },
+      after: (r) => { redraw(); toast(edit ? 'Training updated.' : `Training logged for ${r} bird${r === 1 ? '' : 's'}.`); },
+    });
+  }
+  ACT.addTraining = (id) => trainingForm(null, id);
+  ACT.editTraining = (id) => trainingForm(S.data.training.find((t) => t.id === id));
+  ACT.deleteTraining = (id) => remove('/training/' + id, 'Delete this training record?', 'This cannot be undone.', 'Training deleted.');
+  ACT.viewTraining = (id) => { S.filters.trainBird = id; location.hash = '#/training'; };
+
+  /* ---------- Derbies and fights ---------- */
+  function derbyForm(d) {
+    const edit = !!d;
+    openForm({
+      title: edit ? 'Edit derby' : 'Add derby',
+      submit: edit ? 'Save changes' : 'Save derby',
+      values: d || { date: today() },
+      fields: [
+        { name: 'name', label: 'Derby name', required: true, placeholder: 'Example: 4-Cock Derby' },
+        { name: 'date', label: 'Date', type: 'date', required: true, w: 'half' },
+        { name: 'venue', label: 'Venue', w: 'half' },
+        { name: 'notes', label: 'Notes', type: 'textarea' },
+      ],
+      onSubmit: (v) => (edit ? save('PATCH', '/derbies/' + d.id, v) : save('POST', '/derbies', v)),
+      after: (r) => {
+        if (edit) { redraw(); toast('Derby updated.'); return; }
+        location.hash = '#/derbies/' + r.id;
+        toast('Derby saved. Now add your fights.');
+      },
+    });
+  }
+  ACT.addDerby = () => derbyForm();
+  ACT.editDerby = (id) => derbyForm(GT.derby(id));
+  ACT.deleteDerby = (id) => remove('/derbies/' + id, 'Delete this derby?',
+    'All of its fights, notes and videos are deleted too. This cannot be undone.', 'Derby deleted.', '#/derbies');
+
+  function fightForm(f, derbyId) {
+    const edit = !!f;
+    if (!S.data.derbies.length) return toast('Add a derby first.', 'err');
+    const birds = trainable(f && f.bird_id);
+    if (!birds.length) return toast('Add an active tandang first.', 'err');
+    openForm({
+      title: edit ? 'Edit fight' : 'Add fight',
+      submit: edit ? 'Save changes' : 'Save fight',
+      values: f || { derby_id: derbyId || '' },
+      fields: [
+        { name: 'derby_id', label: 'Derby', type: 'select', required: true, options: [...S.data.derbies].sort((a, b) => b.date.localeCompare(a.date)).map((d) => ({ v: d.id, l: `${d.name} (${fmtDate(d.date)})` })) },
+        { name: 'bird_id', label: 'Bird', type: 'select', required: true, options: birds },
+        { name: 'fight_no', label: 'Fight no.', w: 'half' },
+        { name: 'result', label: 'Result', type: 'select', required: true, options: Object.entries(GT.RESULT).map(([v, l]) => ({ v, l })), w: 'half' },
+        { name: 'weight_g', label: 'Weight (grams)', type: 'number', w: 'half' },
+        { name: 'video_url', label: 'Video link (optional)', placeholder: 'Facebook or YouTube link', help: 'You can also upload the video file after saving.' },
+        { name: 'strengths', label: 'What went well', type: 'textarea' },
+        { name: 'improvements', label: 'What to improve', type: 'textarea' },
+        { name: 'notes', label: 'Other notes', type: 'textarea' },
+      ],
+      onSubmit: (v) => (edit ? save('PATCH', '/fights/' + f.id, v) : save('POST', '/fights', v)),
+      after: (r) => {
+        if (edit) { redraw(); toast('Fight updated.'); return; }
+        location.hash = '#/fights/' + r.id;
+        toast('Fight saved. Upload the video below.');
+      },
+    });
+  }
+  ACT.addFight = (id) => fightForm(null, id);
+  ACT.editFight = (id) => fightForm(GT.fight(id));
+  ACT.deleteFight = (id) => remove('/fights/' + id, 'Delete this fight?',
+    'Its notes and uploaded video are deleted too. This cannot be undone.', 'Fight deleted.', '#/derbies/' + GT.fight(id).derby_id);
+
+  /* ---------- Video upload ---------- */
+  GT.videoMB = 50;
+  const VIDEO_BY_EXT = { mp4: 'video/mp4', m4v: 'video/x-m4v', mov: 'video/quicktime', webm: 'video/webm', '3gp': 'video/3gpp', mkv: 'video/x-matroska' };
+
+  function pickFile(accept) {
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = accept;
+      input.style.display = 'none';
+      input.onchange = () => { resolve(input.files[0] || null); input.remove(); };
+      document.body.appendChild(input);
+      input.click();
+    });
+  }
+
+  function progressBox(name) {
+    const box = document.createElement('div');
+    box.className = 'upload-box';
+    box.innerHTML = `<b>Uploading video</b><span class="muted">${GT.esc(name)}</span><div class="progress"><i style="width:0%"></i></div><small>0%</small>`;
+    document.body.appendChild(box);
+    return {
+      set(p) { const n = Math.round(p * 100); GT.$('i', box).style.width = n + '%'; GT.$('small', box).textContent = p >= 1 ? 'Saving…' : n + '%'; },
+      done() { box.remove(); },
+    };
+  }
+
+  async function sendVideo(file, type, onProgress) {
+    const send = () => new Promise((resolve, reject) => {
+      const x = new XMLHttpRequest();
+      x.open('PUT', '/api/videos');
+      x.setRequestHeader('Authorization', 'Bearer ' + S.token);
+      x.setRequestHeader('Content-Type', type);
+      x.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+      x.onload = () => { let json = {}; try { json = JSON.parse(x.responseText); } catch (e) { /* not JSON */ } resolve({ status: x.status, json }); };
+      x.onerror = () => reject(new Error('The upload failed. Check your internet connection.'));
+      x.send(file);
+    });
+    let r = await send();
+    if (r.status === 401 && (await GT.refreshToken())) r = await send();
+    if (r.status < 200 || r.status >= 300) throw new Error(r.json.error || 'The upload failed. Please try again.');
+    return r.json.path;
+  }
+
+  ACT.uploadVideo = async (id) => {
+    const file = await pickFile('video/*');
+    if (!file) return;
+    const type = file.type || VIDEO_BY_EXT[(file.name.split('.').pop() || '').toLowerCase()];
+    if (!type) return toast('Please choose an MP4, MOV or WebM video.', 'err');
+    const mb = file.size / 1048576;
+    if (mb > GT.videoMB) return toast(`That video is ${Math.round(mb)} MB and the limit is ${GT.videoMB} MB. Trim the clip, or add a link by editing the fight.`, 'err');
+    const box = progressBox(file.name);
+    try {
+      const path = await sendVideo(file, type, box.set);
+      await save('PATCH', '/fights/' + id, { video_path: path });
+      box.done();
+      redraw();
+      toast('Video uploaded.');
+    } catch (e) {
+      box.done();
+      toast(e.message, 'err');
+    }
+  };
+
+  ACT.removeVideo = async (id) => {
+    if (!(await confirmBox('Remove this video?', 'The video file is deleted. Your notes stay.', 'Remove'))) return;
+    try { await save('PATCH', '/fights/' + id, { video_path: null }); redraw(); toast('Video removed.'); } catch (e) { toast(e.message, 'err'); }
+  };
+
+  /* ---------- Video review notes ---------- */
+  async function redrawKeepVideo() {
+    const v = GT.$('#fightVideo');
+    const t = v ? v.currentTime : 0;
+    await GT.render();
+    const nv = GT.$('#fightVideo');
+    if (nv && t) nv.addEventListener('loadedmetadata', () => { nv.currentTime = t; }, { once: true });
+  }
+
+  function noteForm(n, fightId, kind) {
+    const v = GT.$('#fightVideo');
+    if (v && !v.paused) v.pause();
+    openForm({
+      title: n ? 'Edit note' : 'Add note',
+      values: n ? { kind: n.kind, time: GT.fmtTime(n.at_seconds), note: n.note } : { kind: kind || 'improve', time: GT.fmtTime(v ? v.currentTime : 0) },
+      fields: [
+        { name: 'kind', label: 'Type', type: 'seg', required: true, options: Object.entries(GT.NOTE_KIND).map(([val, l]) => ({ v: val, l })) },
+        { name: 'time', label: 'Time in the video (minutes:seconds)', required: true, placeholder: '1:25' },
+        { name: 'note', label: 'What happened?', type: 'textarea', required: true },
+      ],
+      onSubmit: (val) => {
+        const sec = GT.parseTime(val.time);
+        if (sec === null) throw new Error('Time should look like 1:25.');
+        const body = { kind: val.kind, at_seconds: sec, note: val.note };
+        return n ? save('PATCH', '/vnotes/' + n.id, body) : save('POST', '/vnotes', { ...body, fight_id: fightId });
+      },
+      after: () => { redrawKeepVideo(); toast('Note saved.'); },
+    });
+  }
+  ACT.addNote = (id, el) => noteForm(null, id, el && el.dataset.kind);
+  ACT.editNote = (id) => noteForm(S.data.vnotes.find((n) => n.id === id));
+  ACT.deleteNote = async (id) => {
+    if (!(await confirmBox('Delete this note?', 'This cannot be undone.'))) return;
+    try { await api('/vnotes/' + id, { method: 'DELETE' }); await GT.load(); redrawKeepVideo(); toast('Note deleted.'); } catch (e) { toast(e.message, 'err'); }
+  };
+  ACT.seek = (sec) => {
+    const v = GT.$('#fightVideo');
+    if (!v) return toast('Jumping works for uploaded videos only.', 'err');
+    v.currentTime = Number(sec);
+    v.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    const play = v.play();
+    if (play && play.catch) play.catch(() => {});
+  };
+
   /* ---------- Reports ---------- */
   ACT.setPeriod = (key) => { S.period.key = key; redraw(); };
 

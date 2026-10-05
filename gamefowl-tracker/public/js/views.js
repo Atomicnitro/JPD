@@ -61,6 +61,19 @@
     return `${d} day${d === 1 ? '' : 's'} to go`;
   };
 
+  GT.sideToday = () => {
+    const st = stats();
+    const inc = S.data.batches.filter((b) => b.status === 'incubating' && b.expected_hatch)
+      .sort((a, b) => a.expected_hatch.localeCompare(b.expected_hatch));
+    let next = 'None';
+    if (inc.length) {
+      const d = daysBetween(today(), inc[0].expected_hatch);
+      next = d < 0 ? 'Overdue' : d === 0 ? 'Today' : `${d} day${d === 1 ? '' : 's'}`;
+    }
+    const cell = (label, value) => `<div><span>${label}</span><b>${esc(value)}</b></div>`;
+    return cell('Active birds', st.active) + cell('Eggs incubating', st.eggsInc) + cell('Next hatch', next) + cell('Net income', peso(st.net));
+  };
+
   /* ---------- Home ---------- */
   const SEASON = [
     ['2026-10-01', '2026-10-31', 'October 2026', 'Breeder preparation', 'Select healthy breeders; check records; prepare housing and equipment.'],
@@ -83,6 +96,12 @@
     }
     const t = today();
     const showSeason = t <= '2027-04-30';
+    const weekAgo = GT.addDays(t, -6);
+    const cond = {
+      trained: new Set(S.data.training.filter((x) => x.date >= weekAgo && x.type !== 'Rest day').map((x) => x.bird_id)).size,
+      rec: GT.record(S.data.fights),
+      review: S.data.fights.filter((f) => (f.video_path || f.video_url) && !S.data.vnotes.some((n) => n.fight_id === f.id)).length,
+    };
     return `
       <section class="hero">
         <p class="hero-date">${esc(GT.longDate(t))}</p>
@@ -92,6 +111,7 @@
           <button class="qbtn first" data-act="addBird">${icon('plus')}Add bird</button>
           <button class="qbtn" data-act="addPair">${icon('pairs')}Create pair</button>
           <button class="qbtn" data-act="recordHatch">${icon('egg')}Record hatch</button>
+          <button class="qbtn" data-act="addTraining">${icon('dumbbell')}Log training</button>
           <button class="qbtn" data-act="addSale">${icon('tag')}Record sale</button>
           <button class="qbtn" data-act="addExpense">${icon('wallet')}Add expense</button>
         </div>
@@ -108,6 +128,13 @@
         <div class="stat"><b>${st.eggsInc}</b><span>Eggs incubating</span></div>
         <div class="stat"><b>${st.hatched}</b><span>Pisâ hatched</span></div>
         <div class="stat"><b>${st.rate}</b><span>Hatch rate</span></div>
+      </div></div>
+
+      <div class="stat-group"><h3>Training and derbies</h3><div class="stats">
+        <div class="stat"><b>${cond.trained}</b><span>Birds trained this week</span></div>
+        <div class="stat"><b>${esc(cond.rec.text)}</b><span>Derby record</span></div>
+        <div class="stat"><b>${cond.rec.rate}</b><span>Win rate</span></div>
+        <div class="stat"><b>${cond.review}</b><span>Videos to review</span></div>
       </div></div>
 
       <div class="stat-group"><h3>Money</h3><div class="stats">
@@ -191,6 +218,10 @@
     const kids = S.data.birds.filter((c) => c.sire_id === b.id || c.dam_id === b.id).sort(GT.byBand);
     const pairs = S.data.pairs.filter((p) => p.tandang_id === b.id || p.inahin_id === b.id);
     const sale = S.data.sales.find((s) => s.bird_id === b.id);
+    const sessions = S.data.training.filter((t) => t.bird_id === b.id).sort((x, y) => y.date.localeCompare(x.date));
+    const fights = S.data.fights.filter((f) => f.bird_id === b.id)
+      .sort((x, y) => ((GT.derby(y.derby_id) || {}).date || '').localeCompare((GT.derby(x.derby_id) || {}).date || ''));
+    const conditioning = b.sex === 'tandang' || sessions.length || fights.length;
     const parent = (label, p) => p
       ? `<a class="parent" href="#/birds/${p.id}"><small>${label}</small><b>${esc(p.band_id)}</b> ${esc(p.name || '')}</a>`
       : `<div class="parent unk"><small>${label}</small>Unknown / Hindi Naitala</div>`;
@@ -224,6 +255,14 @@
       <h2 class="sec-title">Bloodline and pedigree</h2>
       <div class="ped">${pedNode(b.id, 3, true)}
         <div class="ped-legend"><span><i style="background:var(--pine)"></i>Tandang</span><span><i style="background:var(--brass)"></i>Inahin</span></div></div>
+
+      ${conditioning ? `<h2 class="sec-title">Training<small>${sessions.length}</small></h2>
+        <div class="actions" style="margin-bottom:12px">${smallBtn('addTraining', 'Log training', b.id, 'brass')}${sessions.length > 8 ? smallBtn('viewTraining', 'See all', b.id) : ''}</div>
+        ${weightChart(sessions)}
+        ${sessions.length ? `<div class="list">${sessions.slice(0, 8).map((t) => trainingRow(t, false)).join('')}</div>` : empty('No training yet', 'Log workouts and weigh-ins to see them here.')}
+
+        <h2 class="sec-title">Derby record<small>${esc(GT.record(fights).text)}</small></h2>
+        ${fights.length ? `<div class="list">${fights.map((f) => fightRow(f, true)).join('')}</div>` : empty('No fights yet', 'Fights you record in Derbies show up here with their videos.')}` : ''}
 
       <h2 class="sec-title">Mga anak<small>${kids.length}</small></h2>
       ${kids.length ? `<div class="list">${kids.map(birdRow).join('')}</div>` : empty('No chicks yet', 'Chicks hatched from this bird’s pairs will appear here.')}
@@ -389,6 +428,9 @@
     const sales = S.data.sales.filter((s) => within(s.date_sold, range));
     const expenses = S.data.expenses.filter((x) => within(x.date, range));
     const done = batches.filter((b) => b.status === 'hatched');
+    const sessionsIn = S.data.training.filter((t) => within(t.date, range));
+    const fightsIn = S.data.fights.filter((f) => within((GT.derby(f.derby_id) || {}).date, range));
+    const derbyRec = GT.record(fightsIn);
     const hatched = sum(done, 'eggs_hatched');
     const benta = sum(sales, 'price');
     const gastos = sum(expenses, 'amount');
@@ -430,6 +472,9 @@
         <div class="stats small four" style="margin-top:12px">
         ${stat(birds.filter((b) => b.status === 'active').length, 'Active')}${stat(birds.filter((b) => b.status === 'sold').length, 'Sold')}${stat(birds.filter((b) => b.status === 'deceased').length, 'Deceased')}${stat(birds.filter((b) => b.status === 'culled').length, 'Culled')}</div></div>
 
+      <div class="report-block"><h3>Training and derby report</h3><div class="stats small four">
+        ${stat(sessionsIn.length, 'Training sessions')}${stat(new Set(sessionsIn.map((t) => t.bird_id)).size, 'Birds trained')}${stat(fightsIn.length, 'Fights')}${stat(derbyRec.text, 'Record (' + derbyRec.rate + ' won)')}</div></div>
+
       <div class="report-block"><h3>Sales report</h3><div class="stats small">${stat(peso(benta), 'Total sales')}${stat(sales.length, 'Birds sold')}${stat(peso(benta), 'Total revenue')}</div></div>
 
       <div class="report-block"><h3>Expense report</h3><div class="stats small" style="margin-bottom:16px">${stat(peso(gastos), 'Total expenses')}</div>
@@ -468,17 +513,172 @@
         <button class="btn ghost" data-act="exportJson">${icon('download')}Full backup (JSON)</button>
       </div>
       <p class="note" style="margin:16px 0 8px">Single list as CSV:</p>
-      <div class="actions">${['birds', 'pairs', 'batches', 'sales', 'expenses'].map((t) => `<button class="btn sm ghost" data-act="exportCsv" data-id="${t}">${t === 'batches' ? 'hatch records' : t}</button>`).join('')}</div>
+      <div class="actions">${[['birds', 'birds'], ['pairs', 'pairs'], ['batches', 'hatch records'], ['sales', 'sales'], ['expenses', 'expenses'], ['training_sessions', 'training'], ['derbies', 'derbies'], ['derby_fights', 'fights']].map(([t, l]) => `<button class="btn sm ghost" data-act="exportCsv" data-id="${t}">${l}</button>`).join('')}</div>
       <h2 class="sec-title">Account</h2>
       <p>${esc(S.user.name || S.user.email)}<br><span class="muted">${esc(S.user.email)}, ${S.user.role === 'admin' ? 'Admin' : 'Staff'}</span></p>
       <div class="actions" style="margin-top:12px"><button class="btn ghost" data-act="logout">${icon('logout')}Log out</button></div>`;
+  };
+
+  /* ---------- Training ---------- */
+  const trunc = (t, n) => (String(t).length > n ? String(t).slice(0, n - 1) + '…' : String(t));
+
+  function trainingRow(t, showBird = true) {
+    const b = GT.bird(t.bird_id);
+    const bits = [t.type];
+    if (t.duration_min) bits.push(`${t.duration_min} min`);
+    if (t.weight_g) bits.push(`${Number(t.weight_g).toLocaleString('en-PH')} g`);
+    if (t.condition_score) bits.push(`condition ${t.condition_score}/5`);
+    return `<div class="row stack">${showBird ? thumb(b) : ''}<div class="grow">
+      ${showBird ? `<a class="title" href="#/birds/${t.bird_id}">${esc(GT.birdLabel(b))}</a>` : `<span class="title">${esc(t.type)}</span>`}
+      <small>${esc(showBird ? bits.join(', ') : bits.slice(1).join(', ') || 'No details')}</small>
+      ${t.notes ? `<small>${esc(t.notes)}</small>` : ''}
+      <div class="row-actions">${smallBtn('editTraining', 'Edit', t.id)}${smallBtn('deleteTraining', 'Delete', t.id, 'danger')}</div></div>
+      <span class="end"><small>${fmtDate(t.date)}</small></span></div>`;
+  }
+
+  function weightChart(sessions) {
+    const pts = sessions.filter((t) => t.weight_g).sort((a, b) => a.date.localeCompare(b.date)).slice(-20);
+    if (pts.length < 2) return '';
+    const vals = pts.map((p) => Number(p.weight_g));
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const span = max - min || 1;
+    const W = 640, H = 120, pad = 14;
+    const xy = pts.map((p, i) => [pad + (i * (W - 2 * pad)) / (pts.length - 1), H - pad - ((Number(p.weight_g) - min) / span) * (H - 2 * pad)]);
+    const first = pts[0], last = pts[pts.length - 1];
+    return `<div class="wchart"><div class="wtop"><b>Weight trend</b><span>${Number(last.weight_g).toLocaleString('en-PH')} g now, ${min.toLocaleString('en-PH')} to ${max.toLocaleString('en-PH')} g</span></div>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight trend in grams"><polyline points="${xy.map((p) => p.map((n) => n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="var(--pine)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${xy.map((p) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.2" fill="var(--brass)" stroke="var(--pine)" stroke-width="1.4"/>`).join('')}</svg>
+      <div class="wtop"><span>${fmtDate(first.date)}</span><span>${fmtDate(last.date)}</span></div></div>`;
+  }
+
+  V.training = () => {
+    const all = [...S.data.training].sort((a, b) => b.date.localeCompare(a.date) || (b.created_at || '').localeCompare(a.created_at || ''));
+    const f = S.filters.trainBird;
+    const list = f ? all.filter((t) => t.bird_id === f) : all;
+    const weekAgo = GT.addDays(today(), -6);
+    const week = all.filter((t) => t.date >= weekAgo && t.type !== 'Rest day');
+    const last = {};
+    all.forEach((t) => { if (!last[t.bird_id] || t.date > last[t.bird_id]) last[t.bird_id] = t.date; });
+    const idle = S.data.birds.filter((b) => b.status === 'active' && b.sex === 'tandang' && (!last[b.id] || last[b.id] < weekAgo)).sort(GT.byBand);
+    const trainedBirds = [...new Set(all.map((t) => t.bird_id))].map(GT.bird).filter(Boolean).sort(GT.byBand);
+    return `${head('Training', 'Workouts, weigh-ins and conditioning for your birds.', addBtn('addTraining', 'Log training', 'brass'))}
+      <div class="stats small" style="margin-bottom:18px">
+        <div class="stat"><b>${week.length}</b><span>Sessions in the last 7 days</span></div>
+        <div class="stat"><b>${new Set(week.map((t) => t.bird_id)).size}</b><span>Birds trained this week</span></div>
+        <div class="stat"><b>${all.length}</b><span>Sessions logged</span></div></div>
+      ${idle.length ? `<div class="card" style="margin-bottom:18px"><h3 style="font-size:17px;margin-bottom:4px">Not trained in the last 7 days</h3>
+        <p class="note" style="margin-bottom:10px">Active tandang with no workout logged this week. Tap one to log it.</p>
+        <div class="filter-line">${idle.slice(0, 16).map((b) => `<button class="chip" data-act="addTraining" data-id="${b.id}">${esc(b.band_id)}</button>`).join('')}${idle.length > 16 ? `<span class="note">and ${idle.length - 16} more</span>` : ''}</div></div>` : ''}
+      ${trainedBirds.length > 1 ? `<div class="filters"><div class="filter-line"><select data-filter="trainBird" aria-label="Bird"><option value="">All birds</option>${trainedBirds.map((b) => `<option value="${b.id}"${f === b.id ? ' selected' : ''}>${esc(GT.birdLabel(b))}</option>`).join('')}</select></div></div>` : ''}
+      ${list.length ? `<div class="list">${list.slice(0, 150).map((t) => trainingRow(t)).join('')}</div>${list.length > 150 ? '<p class="note" style="margin-top:10px">Showing the latest 150 sessions.</p>' : ''}`
+        : empty('No training logged yet', 'Log a workout or weigh-in to start tracking your birds’ condition.', addBtn('addTraining', 'Log training', 'brass'))}`;
+  };
+
+  /* ---------- Derbies and fights ---------- */
+  function fightRow(f, showDerby) {
+    const b = GT.bird(f.bird_id);
+    const d = GT.derby(f.derby_id);
+    const notes = S.data.vnotes.filter((n) => n.fight_id === f.id).length;
+    const hasVideo = f.video_path || f.video_url;
+    const bits = [];
+    if (showDerby && d) bits.push(`${d.name}, ${fmtDate(d.date)}`);
+    bits.push(hasVideo ? 'Video attached' : 'No video yet');
+    if (notes) bits.push(`${notes} note${notes === 1 ? '' : 's'}`);
+    return `<a class="row" href="#/fights/${f.id}">${thumb(b)}<span class="grow"><span class="title">${esc(GT.birdLabel(b))}${f.fight_no ? ' (fight ' + esc(f.fight_no) + ')' : ''}</span>
+      <small>${esc(bits.join(', '))}</small>
+      ${f.improvements ? `<small>To improve: ${esc(trunc(f.improvements, 90))}</small>` : ''}</span>${badge('res-' + f.result, GT.RESULT[f.result])}</a>`;
+  }
+
+  V.derbies = () => {
+    const derbies = [...S.data.derbies].sort((a, b) => b.date.localeCompare(a.date));
+    const rec = GT.record(S.data.fights);
+    const review = S.data.fights.filter((f) => (f.video_path || f.video_url) && !S.data.vnotes.some((n) => n.fight_id === f.id));
+    return `${head('Derbies', 'Record every derby and review the video of each fight.', addBtn('addDerby', 'Add derby', 'brass'))}
+      <div class="stats small" style="margin-bottom:18px">
+        <div class="stat"><b>${derbies.length}</b><span>Derbies</span></div>
+        <div class="stat"><b>${rec.n}</b><span>Fights</span></div>
+        <div class="stat"><b>${esc(rec.text)}</b><span>Record</span></div>
+        <div class="stat"><b>${rec.rate}</b><span>Win rate</span></div></div>
+      ${review.length ? `<h2 class="sec-title" style="margin-top:0">Videos to review<small>${review.length}</small></h2><div class="list" style="margin-bottom:8px">${review.slice(0, 5).map((f) => fightRow(f, true)).join('')}</div>` : ''}
+      <h2 class="sec-title"${review.length ? '' : ' style="margin-top:0"'}>All derbies</h2>
+      ${derbies.length ? `<div class="list">${derbies.map((d) => {
+        const fights = S.data.fights.filter((f) => f.derby_id === d.id);
+        const r = GT.record(fights);
+        return `<a class="row" href="#/derbies/${d.id}"><span class="thumb">${icon('trophy')}</span><span class="grow"><span class="title">${esc(d.name)}</span>
+          <small>${fmtDate(d.date)}${d.venue ? ', ' + esc(d.venue) : ''}</small></span>
+          <span class="end"><b>${esc(r.text)}</b><small>${r.n} fight${r.n === 1 ? '' : 's'}</small></span></a>`;
+      }).join('')}</div>` : empty('No derbies yet', 'Add a derby, then record each fight and upload its video.', addBtn('addDerby', 'Add derby', 'brass'))}`;
+  };
+
+  V.derby = (id) => {
+    const d = GT.derby(id);
+    if (!d) return notFound('Derby');
+    const fights = S.data.fights.filter((f) => f.derby_id === id).sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+    const r = GT.record(fights);
+    return `<a class="back" href="#/derbies">${icon('back')}All derbies</a>
+      ${head(d.name, `${fmtDate(d.date)}${d.venue ? ', ' + d.venue : ''}`, `${smallBtn('addFight', 'Add fight', d.id, 'brass')}${smallBtn('editDerby', 'Edit', d.id)}${smallBtn('deleteDerby', 'Delete', d.id, 'danger')}`)}
+      <div class="stats small" style="margin-bottom:18px">
+        <div class="stat"><b>${r.n}</b><span>Fights</span></div><div class="stat"><b>${esc(r.text)}</b><span>Record</span></div><div class="stat"><b>${r.rate}</b><span>Win rate</span></div></div>
+      ${d.notes ? `<p class="note" style="margin-bottom:14px">${esc(d.notes)}</p>` : ''}
+      ${fights.length ? `<div class="list">${fights.map((f) => fightRow(f, false)).join('')}</div>` : empty('No fights recorded', 'Add each fight, then upload the video and note what to improve.', smallBtn('addFight', 'Add fight', d.id, 'brass'))}`;
+  };
+
+  V.fight = async (id) => {
+    const f = GT.fight(id);
+    if (!f) return notFound('Fight');
+    const b = GT.bird(f.bird_id);
+    const d = GT.derby(f.derby_id);
+    const notes = S.data.vnotes.filter((n) => n.fight_id === id).sort((a, c) => a.at_seconds - c.at_seconds);
+    let video;
+    if (f.video_path) {
+      try {
+        const { url } = await GT.api('/videos/url?path=' + encodeURIComponent(f.video_path));
+        video = `<video id="fightVideo" class="video" controls playsinline preload="metadata" src="${esc(url)}"></video>`;
+      } catch (e) {
+        video = `<p class="note">Could not load the video: ${esc(e.message)}</p>`;
+      }
+    } else if (f.video_url) {
+      video = `<div class="empty" style="padding:22px"><b>Video link</b>This video is hosted somewhere else.<br><a class="btn ghost" style="margin-top:12px" href="${esc(f.video_url)}" target="_blank" rel="noopener">Open video</a></div>`;
+    } else {
+      video = empty('No video yet', 'Upload the clip from your phone, or add a link when you edit the fight.');
+    }
+    const hasFile = !!f.video_path;
+    return `<a class="back" href="#/derbies/${f.derby_id}">${icon('back')}${esc(d ? d.name : 'Derby')}</a>
+      ${head(GT.birdLabel(b), `${d ? d.name + ', ' + fmtDate(d.date) : ''}${f.fight_no ? ', fight ' + f.fight_no : ''}`,
+        `${badge('res-' + f.result, GT.RESULT[f.result])}${smallBtn('editFight', 'Edit', f.id)}${smallBtn('deleteFight', 'Delete', f.id, 'danger')}`)}
+      <div class="facts"><div><span>Bird</span><b><a href="#/birds/${f.bird_id}">${esc(GT.birdLabel(b))}</a></b></div>
+        ${f.weight_g ? `<div><span>Weight</span><b>${Number(f.weight_g).toLocaleString('en-PH')} g</b></div>` : ''}
+        <div><span>Result</span><b>${GT.RESULT[f.result]}</b></div></div>
+
+      <h2 class="sec-title" style="margin-top:8px">Video</h2>
+      <div class="video-card">${video}
+        <div class="actions" style="margin-top:12px">${smallBtn('uploadVideo', hasFile ? 'Replace video' : 'Upload video', f.id, 'brass')}${hasFile ? smallBtn('removeVideo', 'Remove video', f.id, 'danger') : ''}</div></div>
+
+      <h2 class="sec-title">Review notes<small>${notes.length}</small></h2>
+      <div class="actions" style="margin-bottom:12px">
+        <button class="btn sm" data-act="addNote" data-id="${f.id}" data-kind="good">${icon('plus')}Good moment</button>
+        <button class="btn sm ghost" data-act="addNote" data-id="${f.id}" data-kind="improve">${icon('plus')}Needs work</button>
+        <button class="btn sm ghost" data-act="addNote" data-id="${f.id}" data-kind="note">${icon('plus')}Note</button></div>
+      <p class="note" style="margin-bottom:12px">${hasFile ? 'Pause the video where it happens, then add a note. Tap a time to jump back to that moment.' : 'Type the time (like 1:25) when you add a note.'}</p>
+      ${notes.length ? `<div class="list">${notes.map((n) => `<div class="row stack vnote ${n.kind}">
+        <button class="vtime" data-act="seek" data-id="${n.at_seconds}" aria-label="Jump to ${GT.fmtTime(n.at_seconds)}">${GT.fmtTime(n.at_seconds)}</button>
+        <div class="grow"><span class="ntag ${n.kind}">${GT.NOTE_KIND[n.kind]}</span><span class="ntext">${esc(n.note)}</span>
+        <div class="row-actions">${smallBtn('editNote', 'Edit', n.id)}${smallBtn('deleteNote', 'Delete', n.id, 'danger')}</div></div></div>`).join('')}</div>`
+        : empty('No notes yet', 'Add notes while you watch, so you remember what to fix.')}
+
+      <div class="cards" style="margin-top:22px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+        <div class="card"><h3 style="font-size:17px;margin-bottom:6px">What went well</h3><p>${f.strengths ? esc(f.strengths) : '<span class="muted">Nothing written yet.</span>'}</p></div>
+        <div class="card"><h3 style="font-size:17px;margin-bottom:6px">What to improve</h3><p>${f.improvements ? esc(f.improvements) : '<span class="muted">Nothing written yet.</span>'}</p></div>
+      </div>
+      ${f.notes ? `<p class="note" style="margin-top:14px">${esc(f.notes)}</p>` : ''}`;
   };
 
   /* ---------- More (phone menu) ---------- */
   V.more = () => {
     const item = (href, ic, label) => `<a class="row" href="${href}">${icon(ic)}<span class="grow title">${label}</span></a>`;
     return `${head('More')}<div class="list">
-      ${item('#/incubator', 'incubator', 'Incubator')}${item('#/sales', 'tag', 'Sales')}${item('#/expenses', 'wallet', 'Expenses')}${item('#/reports', 'chart', 'Reports')}
+      ${item('#/incubator', 'incubator', 'Incubator')}${item('#/training', 'dumbbell', 'Training')}${item('#/derbies', 'trophy', 'Derbies and videos')}${item('#/sales', 'tag', 'Sales')}${item('#/expenses', 'wallet', 'Expenses')}${item('#/reports', 'chart', 'Reports')}
       ${S.user.role === 'admin' ? item('#/users', 'users', 'Users') : ''}${item('#/settings', 'gear', 'Settings and backup')}
       <button class="row" data-act="logout" style="width:100%;text-align:left">${icon('logout')}<span class="grow title">Log out</span></button></div>`;
   };
