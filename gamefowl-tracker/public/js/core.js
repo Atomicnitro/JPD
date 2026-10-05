@@ -48,7 +48,7 @@
   /* ---------- Icons ---------- */
   const ICONS = {
     home: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
-    bird: '<path d="M4 16c0-5 3.5-9.5 9-9.5 2.2 0 3.5 1.2 3.5 3v1l3.5 1.8-3.5 1c-1 3.8-3.8 6.2-7.5 6.2-3 0-5-1.5-5-3.5z"/><circle cx="14" cy="9.6" r=".6" fill="currentColor"/>',
+    bird: '<g fill="currentColor" stroke="none"><circle cx="17.5" cy="4.4" r="1.8"/><path d="M16 3.4 C16 2 17 1.6 17.4 2.4 C17.9 1.6 19 2 18.8 3.2 Z"/><path d="M18.9 3.9 L21.8 5 L18.9 5.7 Z"/><ellipse cx="12" cy="12.2" rx="5.8" ry="3.6" transform="rotate(-20 12 12.2)"/><path d="M8.6 11.8 C4.2 11.8 1.8 8.2 2.4 3.4 C4.2 6.6 7.4 7.8 11 8.4 Z"/><path d="M8.2 13.6 C4.2 14.6 1.8 12 1.8 8.6 C3.4 10.8 6 11.8 9.4 11.4 Z"/></g><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6 C15.8 7.6 16 9.4 15 11" stroke-width="3.2"/><path d="M11 15 L10.8 20 H8.8 M14.2 14.6 L14.8 20 H12.8" stroke-width="1.6"/></g>',
     pairs: '<circle cx="8" cy="12" r="4.5"/><circle cx="16" cy="12" r="4.5"/>',
     egg: '<path d="M12 3c4 0 7 6 7 11a7 7 0 0 1-14 0c0-5 3-11 7-11z"/>',
     incubator: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M10 17h4"/>',

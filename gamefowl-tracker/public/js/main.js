@@ -69,7 +69,8 @@
           <a href="#/settings" data-nav="settings">${icon('gear')}Settings</a>
         </nav>
         <div class="side-foot"><div class="who">${esc(S.user.name || S.user.email)}</div><div class="role">${admin ? 'Admin' : 'Staff'}</div>
-          <button class="btn sm dark" data-act="logout">${icon('logout')}Log out</button></div>
+          <button class="btn sm dark" data-act="logout">${icon('logout')}Log out</button>
+          <p class="side-credit">Created by<br><b>Juan Paolo Dente</b></p></div>
       </aside>
       <main class="main" id="main">
         <div class="mtop"><span class="brand-logo"><img src="/assets/logo-128.png" alt=""></span><b>Gamefowl Tracker</b></div>
