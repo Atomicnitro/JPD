@@ -100,3 +100,7 @@ public/              the website you see in the browser
 - **"Missing Supabase keys"**: your `.env` file is missing or a value is empty.
 - **"Could not save the admin profile"**: run `supabase/schema.sql` first (step 2).
 - **Cannot log in**: make sure you ran the `create-admin` command, and check the email and password.
+
+---
+
+Created by Juan Paolo Dente.

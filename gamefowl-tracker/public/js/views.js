@@ -425,9 +425,10 @@
           `<tr><td><a href="#/pairs/${x.pr.id}"><b>${GT.pairLabel(x.pr)}</b></a> ${esc(GT.bird(x.pr.tandang_id)?.band_id || '')} + ${esc(GT.bird(x.pr.inahin_id)?.band_id || '')}</td><td class="r">${x.eggs}</td><td class="r">${x.hatched}</td><td class="r">${rate(x.hatched, x.eggs)}</td></tr>`).join('')}</tbody></table>`
           : '<p class="muted">No finished hatches in this period.</p>'}</div>
 
-      <div class="report-block"><h3>Bird report</h3><div class="stats small">
-        ${stat(birds.length, 'Total birds')}${stat(birds.filter((b) => b.sex === 'tandang').length, 'Tandang')}${stat(birds.filter((b) => b.sex === 'inahin').length, 'Inahin')}${stat(birds.filter((b) => b.sex === 'sisiw').length, 'Sisiw')}
-        ${stat(birds.filter((b) => b.status === 'sold').length, 'Sold')}${stat(birds.filter((b) => b.status === 'deceased').length, 'Deceased')}${stat(birds.filter((b) => b.status === 'culled').length, 'Culled')}</div></div>
+      <div class="report-block"><h3>Bird report</h3><div class="stats small four">
+        ${stat(birds.length, 'Total birds')}${stat(birds.filter((b) => b.sex === 'tandang').length, 'Tandang')}${stat(birds.filter((b) => b.sex === 'inahin').length, 'Inahin')}${stat(birds.filter((b) => b.sex === 'sisiw').length, 'Sisiw')}</div>
+        <div class="stats small four" style="margin-top:12px">
+        ${stat(birds.filter((b) => b.status === 'active').length, 'Active')}${stat(birds.filter((b) => b.status === 'sold').length, 'Sold')}${stat(birds.filter((b) => b.status === 'deceased').length, 'Deceased')}${stat(birds.filter((b) => b.status === 'culled').length, 'Culled')}</div></div>
 
       <div class="report-block"><h3>Sales report</h3><div class="stats small">${stat(peso(benta), 'Total sales')}${stat(sales.length, 'Birds sold')}${stat(peso(benta), 'Total revenue')}</div></div>
 

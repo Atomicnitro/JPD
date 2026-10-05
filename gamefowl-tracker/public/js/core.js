@@ -9,8 +9,10 @@
   GT.$$ = (s, r = document) => [...r.querySelectorAll(s)];
   GT.esc = (s) =>
     String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  GT.peso = (n) =>
-    '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  GT.peso = (n) => {
+    const v = Number(n || 0);
+    return (v < 0 ? '-' : '') + '₱' + Math.abs(v).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  };
   GT.pad3 = (n) => String(n).padStart(3, '0');
   GT.sum = (arr, key) => arr.reduce((t, x) => t + (Number(x[key]) || 0), 0);
 

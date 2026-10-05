@@ -17,7 +17,8 @@
         <div><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required></div>
         <p class="err" id="loginErr" ${message ? '' : 'hidden'}>${esc(message || '')}</p>
         <button class="btn brass" type="submit">Log in</button>
-      </form></div></main>`;
+      </form>
+      <p class="credit-login">Created by <b>Juan Paolo Dente</b></p></div></main>`;
     $('#loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = $('button', e.target);
@@ -73,6 +74,7 @@
       <main class="main" id="main">
         <div class="mtop"><span class="brand-logo"><img src="/assets/logo-128.png" alt=""></span><b>Gamefowl Tracker</b></div>
         <div id="view"></div>
+        <footer class="credit">Created by&nbsp;<b>Juan Paolo Dente</b></footer>
       </main>
       <nav class="tabs" aria-label="Main">
         <a href="#/" data-tab="home">${icon('home')}Home</a>

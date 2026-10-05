@@ -2,6 +2,7 @@
   "name": "gamefowl-tracker",
   "version": "1.0.0",
   "description": "Gamefowl breeding, hatch, sales and expense records for Philippine breeders",
+  "author": "Juan Paolo Dente",
   "private": true,
   "main": "server.js",
   "scripts": {
