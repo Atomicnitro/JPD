@@ -195,6 +195,8 @@ create table if not exists derbies (
   date        date not null,
   venue       text,
   notes       text,
+  video_path  text,
+  video_url   text,
   created_at  timestamptz not null default now()
 );
 
@@ -217,11 +219,13 @@ create index if not exists fights_derby_idx on derby_fights(derby_id);
 
 create table if not exists video_notes (
   id          uuid primary key default gen_random_uuid(),
-  fight_id    uuid not null references derby_fights(id) on delete cascade,
+  fight_id    uuid references derby_fights(id) on delete cascade,
+  derby_id    uuid references derbies(id) on delete cascade,
   at_seconds  integer not null check (at_seconds >= 0),
   kind        text not null default 'improve' check (kind in ('good', 'improve', 'note')),
   note        text not null,
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  constraint video_notes_owner check ((fight_id is not null)::int + (derby_id is not null)::int = 1)
 );
 create index if not exists vnotes_fight_idx on video_notes(fight_id, at_seconds);
 

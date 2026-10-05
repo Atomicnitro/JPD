@@ -194,12 +194,19 @@ const RESOURCES = {
     required: { bird_id: 'Bird', date: 'Date', type: 'Type of training' },
   },
   derbies: {
-    cols: ['name', 'date', 'venue', 'notes'],
+    cols: ['name', 'date', 'venue', 'notes', 'video_path', 'video_url'],
     required: { name: 'Derby name', date: 'Date' },
-    // Remove the video files of every fight in this derby once it is deleted.
+    async prepare(row, existing) {
+      // Replacing or removing the derby video deletes the old file.
+      if (existing && 'video_path' in row && existing.video_path && row.video_path !== existing.video_path) {
+        await removeVideos([existing.video_path]);
+      }
+    },
+    // Remove the derby's own video and the video of every fight in it once it is deleted.
     async filesToRemove(id) {
+      const { data: own } = await db.from('derbies').select('video_path').eq('id', id).maybeSingle();
       const { data } = await db.from('derby_fights').select('video_path').eq('derby_id', id);
-      return (data || []).map((f) => f.video_path).filter(Boolean);
+      return [own && own.video_path, ...(data || []).map((f) => f.video_path)].filter(Boolean);
     },
   },
   fights: {
@@ -219,8 +226,11 @@ const RESOURCES = {
   },
   vnotes: {
     table: 'video_notes',
-    cols: ['fight_id', 'at_seconds', 'kind', 'note'],
-    required: { fight_id: 'Fight', at_seconds: 'Time', note: 'Note' },
+    cols: ['fight_id', 'derby_id', 'at_seconds', 'kind', 'note'],
+    required: { at_seconds: 'Time', note: 'Note' },
+    async prepare(row, existing) {
+      if (!existing && !row.fight_id && !row.derby_id) throw fail(400, 'Pick a fight or a derby for this note.');
+    },
   },
 };
 

@@ -606,23 +606,69 @@
         const fights = S.data.fights.filter((f) => f.derby_id === d.id);
         const r = GT.record(fights);
         return `<a class="row" href="#/derbies/${d.id}"><span class="thumb">${icon('trophy')}</span><span class="grow"><span class="title">${esc(d.name)}</span>
-          <small>${fmtDate(d.date)}${d.venue ? ', ' + esc(d.venue) : ''}</small></span>
+          <small>${fmtDate(d.date)}${d.venue ? ', ' + esc(d.venue) : ''}${d.video_path || d.video_url ? ', video attached' : ''}</small></span>
           <span class="end"><b>${esc(r.text)}</b><small>${r.n} fight${r.n === 1 ? '' : 's'}</small></span></a>`;
       }).join('')}</div>` : empty('No derbies yet', 'Add a derby, then record each fight and upload its video.', addBtn('addDerby', 'Add derby', 'brass'))}`;
   };
 
-  V.derby = (id) => {
+  V.derby = async (id) => {
     const d = GT.derby(id);
     if (!d) return notFound('Derby');
     const fights = S.data.fights.filter((f) => f.derby_id === id).sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
     const r = GT.record(fights);
+    const notes = S.data.vnotes.filter((n) => n.derby_id === id).sort((a, c) => a.at_seconds - c.at_seconds);
+    const vc = await videoCard(d, 'derby');
     return `<a class="back" href="#/derbies">${icon('back')}All derbies</a>
       ${head(d.name, `${fmtDate(d.date)}${d.venue ? ', ' + d.venue : ''}`, `${smallBtn('addFight', 'Add fight', d.id, 'brass')}${smallBtn('editDerby', 'Edit', d.id)}${smallBtn('deleteDerby', 'Delete', d.id, 'danger')}`)}
       <div class="stats small" style="margin-bottom:18px">
         <div class="stat"><b>${r.n}</b><span>Fights</span></div><div class="stat"><b>${esc(r.text)}</b><span>Record</span></div><div class="stat"><b>${r.rate}</b><span>Win rate</span></div></div>
       ${d.notes ? `<p class="note" style="margin-bottom:14px">${esc(d.notes)}</p>` : ''}
-      ${fights.length ? `<div class="list">${fights.map((f) => fightRow(f, false)).join('')}</div>` : empty('No fights recorded', 'Add each fight, then upload the video and note what to improve.', smallBtn('addFight', 'Add fight', d.id, 'brass'))}`;
+      <h2 class="sec-title" style="margin-top:8px">Fights<small>${fights.length}</small></h2>
+      ${fights.length ? `<div class="list">${fights.map((f) => fightRow(f, false)).join('')}</div>` : empty('No fights recorded', 'Add each fight, then upload its video and note what to improve.', smallBtn('addFight', 'Add fight', d.id, 'brass'))}
+      <h2 class="sec-title">Whole derby video</h2>
+      <p class="note" style="margin-bottom:12px">One video for the whole derby. Each fight can also have its own video.</p>
+      ${vc.html}
+      ${notesSection(notes, d.id, 'derby', vc.hasFile)}`;
   };
+
+  // Video player + upload buttons, shared by a fight page and a derby page.
+  async function videoCard(owner, ownerType) {
+    const own = ownerType === 'derby' ? ' data-owner="derby"' : '';
+    let video;
+    if (owner.video_path) {
+      try {
+        const { url } = await GT.api('/videos/url?path=' + encodeURIComponent(owner.video_path));
+        video = `<video id="fightVideo" class="video" controls playsinline preload="metadata" src="${esc(url)}"></video>`;
+      } catch (e) {
+        video = `<p class="note">Could not load the video: ${esc(e.message)}</p>`;
+      }
+    } else if (owner.video_url) {
+      video = `<div class="empty" style="padding:22px"><b>Video link</b>This video is hosted somewhere else.<br><a class="btn ghost" style="margin-top:12px" href="${esc(owner.video_url)}" target="_blank" rel="noopener">Open video</a></div>`;
+    } else {
+      video = empty('No video yet', 'Upload the clip from your phone, or add a link when you edit this.');
+    }
+    const hasFile = !!owner.video_path;
+    return {
+      hasFile,
+      html: `<div class="video-card">${video}<div class="actions" style="margin-top:12px">
+        <button class="btn sm brass" data-act="uploadVideo" data-id="${owner.id}"${own}>${hasFile ? 'Replace video' : 'Upload video'}</button>
+        ${hasFile ? `<button class="btn sm danger" data-act="removeVideo" data-id="${owner.id}"${own}>Remove video</button>` : ''}</div></div>`,
+    };
+  }
+
+  // Timed review notes under a video.
+  function notesSection(notes, ownerId, ownerType, hasFile) {
+    const own = ownerType === 'derby' ? ' data-owner="derby"' : '';
+    const addBtnNote = (kind, label, cls) => `<button class="btn sm ${cls}" data-act="addNote" data-id="${ownerId}" data-kind="${kind}"${own}>${icon('plus')}${label}</button>`;
+    return `<h2 class="sec-title">Review notes<small>${notes.length}</small></h2>
+      <div class="actions" style="margin-bottom:12px">${addBtnNote('good', 'Good moment', '')}${addBtnNote('improve', 'Needs work', 'ghost')}${addBtnNote('note', 'Note', 'ghost')}</div>
+      <p class="note" style="margin-bottom:12px">${hasFile ? 'Pause the video where it happens, then add a note. Tap a time to jump back to that moment.' : 'Type the time (like 1:25) when you add a note.'}</p>
+      ${notes.length ? `<div class="list">${notes.map((n) => `<div class="row stack vnote ${n.kind}">
+        <button class="vtime" data-act="seek" data-id="${n.at_seconds}" aria-label="Jump to ${GT.fmtTime(n.at_seconds)}">${GT.fmtTime(n.at_seconds)}</button>
+        <div class="grow"><span class="ntag ${n.kind}">${GT.NOTE_KIND[n.kind]}</span><span class="ntext">${esc(n.note)}</span>
+        <div class="row-actions">${smallBtn('editNote', 'Edit', n.id)}${smallBtn('deleteNote', 'Delete', n.id, 'danger')}</div></div></div>`).join('')}</div>`
+        : empty('No notes yet', 'Add notes while you watch, so you remember what to fix.')}`;
+  }
 
   V.fight = async (id) => {
     const f = GT.fight(id);
@@ -630,20 +676,7 @@
     const b = GT.bird(f.bird_id);
     const d = GT.derby(f.derby_id);
     const notes = S.data.vnotes.filter((n) => n.fight_id === id).sort((a, c) => a.at_seconds - c.at_seconds);
-    let video;
-    if (f.video_path) {
-      try {
-        const { url } = await GT.api('/videos/url?path=' + encodeURIComponent(f.video_path));
-        video = `<video id="fightVideo" class="video" controls playsinline preload="metadata" src="${esc(url)}"></video>`;
-      } catch (e) {
-        video = `<p class="note">Could not load the video: ${esc(e.message)}</p>`;
-      }
-    } else if (f.video_url) {
-      video = `<div class="empty" style="padding:22px"><b>Video link</b>This video is hosted somewhere else.<br><a class="btn ghost" style="margin-top:12px" href="${esc(f.video_url)}" target="_blank" rel="noopener">Open video</a></div>`;
-    } else {
-      video = empty('No video yet', 'Upload the clip from your phone, or add a link when you edit the fight.');
-    }
-    const hasFile = !!f.video_path;
+    const vc = await videoCard(f, 'fight');
     return `<a class="back" href="#/derbies/${f.derby_id}">${icon('back')}${esc(d ? d.name : 'Derby')}</a>
       ${head(GT.birdLabel(b), `${d ? d.name + ', ' + fmtDate(d.date) : ''}${f.fight_no ? ', fight ' + f.fight_no : ''}`,
         `${badge('res-' + f.result, GT.RESULT[f.result])}${smallBtn('editFight', 'Edit', f.id)}${smallBtn('deleteFight', 'Delete', f.id, 'danger')}`)}
@@ -652,20 +685,8 @@
         <div><span>Result</span><b>${GT.RESULT[f.result]}</b></div></div>
 
       <h2 class="sec-title" style="margin-top:8px">Video</h2>
-      <div class="video-card">${video}
-        <div class="actions" style="margin-top:12px">${smallBtn('uploadVideo', hasFile ? 'Replace video' : 'Upload video', f.id, 'brass')}${hasFile ? smallBtn('removeVideo', 'Remove video', f.id, 'danger') : ''}</div></div>
-
-      <h2 class="sec-title">Review notes<small>${notes.length}</small></h2>
-      <div class="actions" style="margin-bottom:12px">
-        <button class="btn sm" data-act="addNote" data-id="${f.id}" data-kind="good">${icon('plus')}Good moment</button>
-        <button class="btn sm ghost" data-act="addNote" data-id="${f.id}" data-kind="improve">${icon('plus')}Needs work</button>
-        <button class="btn sm ghost" data-act="addNote" data-id="${f.id}" data-kind="note">${icon('plus')}Note</button></div>
-      <p class="note" style="margin-bottom:12px">${hasFile ? 'Pause the video where it happens, then add a note. Tap a time to jump back to that moment.' : 'Type the time (like 1:25) when you add a note.'}</p>
-      ${notes.length ? `<div class="list">${notes.map((n) => `<div class="row stack vnote ${n.kind}">
-        <button class="vtime" data-act="seek" data-id="${n.at_seconds}" aria-label="Jump to ${GT.fmtTime(n.at_seconds)}">${GT.fmtTime(n.at_seconds)}</button>
-        <div class="grow"><span class="ntag ${n.kind}">${GT.NOTE_KIND[n.kind]}</span><span class="ntext">${esc(n.note)}</span>
-        <div class="row-actions">${smallBtn('editNote', 'Edit', n.id)}${smallBtn('deleteNote', 'Delete', n.id, 'danger')}</div></div></div>`).join('')}</div>`
-        : empty('No notes yet', 'Add notes while you watch, so you remember what to fix.')}
+      ${vc.html}
+      ${notesSection(notes, f.id, 'fight', vc.hasFile)}
 
       <div class="cards" style="margin-top:22px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
         <div class="card"><h3 style="font-size:17px;margin-bottom:6px">What went well</h3><p>${f.strengths ? esc(f.strengths) : '<span class="muted">Nothing written yet.</span>'}</p></div>

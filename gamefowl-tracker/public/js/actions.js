@@ -336,9 +336,9 @@
         edit ? { name: 'bird_id', label: 'Bird', type: 'select', required: true, options: birds }
           : { name: 'bird_ids', label: 'Birds (pick one or many)', type: 'checks', required: true, options: birds },
         { name: 'date', label: 'Date', type: 'date', required: true, w: 'half' },
-        { name: 'type', label: 'Type', type: 'select', required: true, options: GT.TRAIN_TYPES.map((x) => ({ v: x, l: x })), w: 'half' },
+        { name: 'type', label: 'Training', type: 'select', required: true, options: [...new Set([...GT.TRAIN_TYPES, ...(t ? [t.type] : [])])].map((x) => ({ v: x, l: x })), w: 'half' },
         { name: 'duration_min', label: 'Minutes', type: 'number', step: 1, w: 'half' },
-        { name: 'weight_g', label: 'Weight (grams)', type: 'number', w: 'half', help: edit ? '' : 'Only when logging one bird.' },
+        { name: 'weight_g', label: 'Weight (grams)', type: 'number', w: 'half', help: edit ? 'Optional.' : 'Optional. Only when logging one bird.' },
         { name: 'condition_score', label: 'Condition', type: 'select', blank: 'Not rated', options: [1, 2, 3, 4, 5].map((n) => ({ v: n, l: GT.CONDITION[n] })) },
         { name: 'notes', label: 'Notes', type: 'textarea' },
       ],
@@ -371,6 +371,7 @@
         { name: 'name', label: 'Derby name', required: true, placeholder: 'Example: 4-Cock Derby' },
         { name: 'date', label: 'Date', type: 'date', required: true, w: 'half' },
         { name: 'venue', label: 'Venue', w: 'half' },
+        { name: 'video_url', label: 'Video link (optional)', placeholder: 'Facebook or YouTube link', help: 'You can also upload the video file on the derby page.' },
         { name: 'notes', label: 'Notes', type: 'textarea' },
       ],
       onSubmit: (v) => (edit ? save('PATCH', '/derbies/' + d.id, v) : save('POST', '/derbies', v)),
@@ -463,7 +464,10 @@
     return r.json.path;
   }
 
-  ACT.uploadVideo = async (id) => {
+  const videoPath = (el) => (el && el.dataset.owner === 'derby' ? '/derbies/' : '/fights/');
+
+  ACT.uploadVideo = async (id, el) => {
+    const target = videoPath(el);
     const file = await pickFile('video/*');
     if (!file) return;
     const type = file.type || VIDEO_BY_EXT[(file.name.split('.').pop() || '').toLowerCase()];
@@ -473,7 +477,7 @@
     const box = progressBox(file.name);
     try {
       const path = await sendVideo(file, type, box.set);
-      await save('PATCH', '/fights/' + id, { video_path: path });
+      await save('PATCH', target + id, { video_path: path });
       box.done();
       redraw();
       toast('Video uploaded.');
@@ -483,9 +487,9 @@
     }
   };
 
-  ACT.removeVideo = async (id) => {
+  ACT.removeVideo = async (id, el) => {
     if (!(await confirmBox('Remove this video?', 'The video file is deleted. Your notes stay.', 'Remove'))) return;
-    try { await save('PATCH', '/fights/' + id, { video_path: null }); redraw(); toast('Video removed.'); } catch (e) { toast(e.message, 'err'); }
+    try { await save('PATCH', videoPath(el) + id, { video_path: null }); redraw(); toast('Video removed.'); } catch (e) { toast(e.message, 'err'); }
   };
 
   /* ---------- Video review notes ---------- */
@@ -497,7 +501,7 @@
     if (nv && t) nv.addEventListener('loadedmetadata', () => { nv.currentTime = t; }, { once: true });
   }
 
-  function noteForm(n, fightId, kind) {
+  function noteForm(n, ownerId, kind, owner) {
     const v = GT.$('#fightVideo');
     if (v && !v.paused) v.pause();
     openForm({
@@ -512,12 +516,12 @@
         const sec = GT.parseTime(val.time);
         if (sec === null) throw new Error('Time should look like 1:25.');
         const body = { kind: val.kind, at_seconds: sec, note: val.note };
-        return n ? save('PATCH', '/vnotes/' + n.id, body) : save('POST', '/vnotes', { ...body, fight_id: fightId });
+        return n ? save('PATCH', '/vnotes/' + n.id, body) : save('POST', '/vnotes', { ...body, [owner === 'derby' ? 'derby_id' : 'fight_id']: ownerId });
       },
       after: () => { redrawKeepVideo(); toast('Note saved.'); },
     });
   }
-  ACT.addNote = (id, el) => noteForm(null, id, el && el.dataset.kind);
+  ACT.addNote = (id, el) => noteForm(null, id, el && el.dataset.kind, el && el.dataset.owner);
   ACT.editNote = (id) => noteForm(S.data.vnotes.find((n) => n.id === id));
   ACT.deleteNote = async (id) => {
     if (!(await confirmBox('Delete this note?', 'This cannot be undone.'))) return;

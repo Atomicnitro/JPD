@@ -40,7 +40,7 @@
   GT.SEX = { tandang: 'Tandang', inahin: 'Inahin', sisiw: 'Sisiw' };
   GT.STATUS = { active: 'Active', sold: 'Sold', deceased: 'Deceased', culled: 'Culled' };
   GT.PAIR_STATUS = { active: 'Active', inactive: 'Inactive', retired: 'Retired' };
-  GT.TRAIN_TYPES = ['Conditioning workout', 'Sparring', 'Flying / exercise', 'Weigh-in', 'Rest day', 'Other'];
+  GT.TRAIN_TYPES = ['Scratch pen', 'Fly pen'];
   GT.CONDITION = { 1: '1 - Poor', 2: '2 - Fair', 3: '3 - Good', 4: '4 - Very good', 5: '5 - Excellent' };
   GT.RESULT = { win: 'Win', loss: 'Loss', draw: 'Draw', no_contest: 'No contest' };
   GT.NOTE_KIND = { good: 'Good', improve: 'Needs work', note: 'Note' };
