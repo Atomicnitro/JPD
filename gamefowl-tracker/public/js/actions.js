@@ -313,6 +313,8 @@
       after: done(edit ? 'Expense updated.' : 'Expense saved.'),
     });
   }
+  ACT.setExpPeriod = (key) => { S.expFilter = { period: key, cat: 'all' }; redraw(); };
+  ACT.setExpCat = (c) => { const f = S.expFilter || { period: 'all', cat: 'all' }; S.expFilter = { period: f.period, cat: f.cat === c ? 'all' : c }; redraw(); };
   ACT.addExpense = () => expenseForm();
   ACT.editExpense = (id) => expenseForm(S.data.expenses.find((x) => x.id === id));
   ACT.deleteExpense = (id) => remove('/expenses/' + id, 'Delete this expense?', 'This cannot be undone.', 'Expense deleted.');

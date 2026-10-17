@@ -393,14 +393,76 @@
   };
 
   /* ---------- Expenses ---------- */
+  const EXP_COLORS = ['#134430', '#c9a24d', '#3d7a8a', '#8f7022', '#5f8f76', '#a8382a', '#6b7a70', '#7a5a8a'];
+  const expColor = (cat) => {
+    const i = (GT.CATEGORIES || []).indexOf(cat);
+    return EXP_COLORS[(i < 0 ? 0 : i) % EXP_COLORS.length];
+  };
+  const monthName = (key) => new Date(key + '-01T00:00:00').toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+
   V.expenses = () => {
-    const list = [...S.data.expenses].sort((a, b) => b.date.localeCompare(a.date));
+    const F = S.expFilter || (S.expFilter = { period: 'all', cat: 'all' });
+    const all = [...S.data.expenses].sort((a, b) => b.date.localeCompare(a.date));
+    const t = today();
+    const nowKey = t.slice(0, 7);
+    const ly = Number(t.slice(0, 4)), lm = Number(t.slice(5, 7)) - 1;
+    const lastKey = lm === 0 ? `${ly - 1}-12` : `${ly}-${String(lm).padStart(2, '0')}`;
+    const inPeriod = (x) =>
+      F.period === 'month' ? x.date.slice(0, 7) === nowKey
+      : F.period === 'last' ? x.date.slice(0, 7) === lastKey
+      : F.period === 'year' ? x.date.slice(0, 4) === t.slice(0, 4)
+      : true;
+
+    const byPeriod = all.filter(inPeriod);
+    const totals = {};
+    byPeriod.forEach((x) => { totals[x.category] = (totals[x.category] || 0) + Number(x.amount || 0); });
+    const cats = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+    const cat = cats.some(([c]) => c === F.cat) ? F.cat : 'all';
+    const list = cat === 'all' ? byPeriod : byPeriod.filter((x) => x.category === cat);
+
+    const periodTotal = sum(byPeriod, 'amount');
+    const shownTotal = sum(list, 'amount');
+    const thisMonth = sum(all.filter((x) => x.date.slice(0, 7) === nowKey), 'amount');
+    const lastMonth = sum(all.filter((x) => x.date.slice(0, 7) === lastKey), 'amount');
+    const diff = thisMonth - lastMonth;
+    const vsLast = !lastMonth && !thisMonth ? 'Nothing spent yet this month'
+      : !lastMonth ? 'Nothing spent last month'
+      : diff === 0 ? 'Same as last month'
+      : `${peso(Math.abs(diff))} ${diff > 0 ? 'more' : 'less'} than last month`;
+
+    const pchip = (k, l) => `<button class="chip${F.period === k ? ' on' : ''}" data-act="setExpPeriod" data-id="${k}">${l}</button>`;
+    const cchip = (k, l) => `<button class="chip${cat === k ? ' on' : ''}" data-act="setExpCat" data-id="${esc(k)}">${esc(l)}</button>`;
+
+    const groups = [];
+    list.forEach((x) => {
+      const k = x.date.slice(0, 7);
+      if (!groups.length || groups[groups.length - 1].k !== k) groups.push({ k, items: [] });
+      groups[groups.length - 1].items.push(x);
+    });
+
+    const top = cats[0];
     return `${head('Expenses', 'Feed, medicine, equipment and everything else you spend.', addBtn('addExpense', 'Add expense', 'brass'))}
-      <div class="stats small" style="margin-bottom:18px"><div class="stat"><b>${peso(sum(list, 'amount'))}</b><span>Total expenses</span></div><div class="stat"><b>${list.length}</b><span>Records</span></div></div>
-      ${list.length ? `<div class="list">${list.map((x) => `<div class="row stack"><div class="grow"><span class="title">${esc(x.category)}</span>
-        <small>${fmtDate(x.date)}${x.description ? ': ' + esc(x.description) : ''}</small>
-        <div class="row-actions">${smallBtn('editExpense', 'Edit', x.id)}${smallBtn('deleteExpense', 'Delete', x.id, 'danger')}</div></div>
-        <span class="end"><b>${peso(x.amount)}</b></span></div>`).join('')}</div>` : empty('No expenses yet', 'Record feed, vitamins, medicine and other costs to see your net income.', addBtn('addExpense', 'Add expense', 'brass'))}`;
+      <div class="stats small exp-stats">
+        <div class="stat"><b>${peso(thisMonth)}</b><span>Spent this month</span><em class="exp-note">${esc(vsLast)}</em></div>
+        <div class="stat"><b>${peso(periodTotal)}</b><span>${{ month: 'This month', last: 'Last month', year: 'This year', all: 'All time' }[F.period]}</span><em class="exp-note">${byPeriod.length} record${byPeriod.length === 1 ? '' : 's'}</em></div>
+        <div class="stat"><b>${top ? esc(top[0]) : 'None'}</b><span>Biggest cost</span><em class="exp-note">${top && periodTotal ? Math.round((top[1] / periodTotal) * 100) + '% of ' + peso(periodTotal) : 'Add an expense to see this'}</em></div>
+      </div>
+      <div class="filter-line exp-filters">${pchip('month', 'This month')}${pchip('last', 'Last month')}${pchip('year', 'This year')}${pchip('all', 'All time')}</div>
+      ${cats.length ? `<div class="report-block exp-break"><h3>Where the money goes</h3>
+        ${cats.map(([c, v]) => `<button class="bar-row exp-bar${cat === c ? ' on' : ''}" data-act="setExpCat" data-id="${esc(c)}">
+          <span>${esc(c)} <small>${periodTotal ? Math.round((v / periodTotal) * 100) : 0}%</small></span>
+          <div class="bar"><i style="width:${periodTotal ? Math.max(3, (v / periodTotal) * 100) : 0}%;background:${expColor(c)}"></i></div>
+          <span class="v">${peso(v)}</span></button>`).join('')}
+        <p class="muted exp-hint">Tap a category to show only those expenses.</p></div>
+      <div class="filter-line exp-filters">${cchip('all', 'All categories')}${cats.map(([c]) => cchip(c, c)).join('')}</div>` : ''}
+      ${list.length ? groups.map((g) => `<div class="exp-month"><h3>${esc(monthName(g.k))}</h3><span>${peso(sum(g.items, 'amount'))} &middot; ${g.items.length} record${g.items.length === 1 ? '' : 's'}</span></div>
+        <div class="list">${g.items.map((x) => `<div class="row stack exp-row"><i class="exp-dot" style="background:${expColor(x.category)}"></i>
+          <div class="grow"><span class="title">${esc(x.description || x.category)}</span>
+          <small>${esc(x.category)} &middot; ${fmtDate(x.date)}</small>
+          <div class="row-actions">${smallBtn('editExpense', 'Edit', x.id)}${smallBtn('deleteExpense', 'Delete', x.id, 'danger')}</div></div>
+          <span class="end"><b>${peso(x.amount)}</b></span></div>`).join('')}</div>`).join('')
+        + (cat !== 'all' || F.period !== 'all' ? `<p class="muted exp-foot">Showing ${list.length} record${list.length === 1 ? '' : 's'} totalling ${peso(shownTotal)}.</p>` : '')
+        : empty(all.length ? 'Nothing here' : 'No expenses yet', all.length ? 'No expenses match this filter. Try All time or All categories.' : 'Record feed, vitamins, medicine and other costs to see your net income.', addBtn('addExpense', 'Add expense', 'brass'))}`;
   };
 
   /* ---------- Reports ---------- */
