@@ -15,41 +15,67 @@
         <nav class="land-nav" aria-label="Site">
           <a class="land-brand" href="#/"><span class="brand-logo"><img src="/assets/logo-128.png" alt=""></span><b>Gamefowl Tracker</b></a>
           <div class="land-links">
+            <button type="button" data-scroll="land-profile">Bird profiles</button>
             <button type="button" data-scroll="land-features">What it tracks</button>
             <button type="button" data-scroll="land-flow">How it connects</button>
           </div>
           <a class="land-login" href="#/login">Log in</a>
         </nav>
-        <div class="land-copy">
-          <p class="land-badge"><i></i>Private record book for gamefowl breeders</p>
-          <h1>Every bird, pair and peso in one place.</h1>
-          <p class="land-lead">Keep pedigree, hatches, training, derbies, sales and expenses together, and check them from your phone at the pens.</p>
-          <div class="land-cta">
-            <a class="btn brass" href="#/login">Log in</a>
-            <button class="btn dark" type="button" data-scroll="land-features">See what it tracks</button>
-          </div>
-          <p class="land-note">Made for one farm and its staff. Ask your admin for an account.</p>
-        </div>
-        <div class="land-stage">
-          <div class="land-rays" aria-hidden="true"></div>
-          <figure class="land-ped" aria-label="Example pedigree">
-            <div class="land-frame">
-              <div class="ped">
-                <div class="pn"><div class="pcard self"><b>GF-005</b><small>Apoy</small></div>
-                  <div class="pk">
-                    <div class="pn"><div class="pcard tandang"><b>GF-001</b><small>Bulik</small></div>
-                      <div class="pk"><div class="pn"><div class="pcard tandang"><b>GF-014</b><small>Hari</small></div></div><div class="pn"><div class="pcard inahin"><b>GF-009</b><small>Dalaga</small></div></div></div></div>
-                    <div class="pn"><div class="pcard inahin"><b>GF-003</b><small>Maya</small></div>
-                      <div class="pk"><div class="pn"><div class="pcard tandang"><b>GF-011</b><small>Bayani</small></div></div><div class="pn"><div class="pcard unk"><small>Unknown</small></div></div></div></div>
-                  </div>
-                </div>
-                <div class="ped-legend"><span><i style="background:var(--pine)"></i>Tandang</span><span><i style="background:var(--brass)"></i>Inahin</span></div>
-              </div>
+        <div class="land-hero-grid">
+          <div class="land-copy">
+            <p class="land-badge"><i></i>Private record book for gamefowl breeders</p>
+            <h1>Every bird, pair and peso in one place.</h1>
+            <p class="land-lead">Keep pedigree, hatches, training, derbies, sales and expenses together, and check them from your phone at the pens.</p>
+            <div class="land-cta">
+              <a class="btn brass" href="#/login">Log in</a>
+              <button class="btn dark" type="button" data-scroll="land-profile">See a bird record</button>
             </div>
-            <figcaption>Example pedigree. Every bird you add builds its own.</figcaption>
-          </figure>
+            <p class="land-note">Made for one farm and its staff. Ask your admin for an account.</p>
+          </div>
+          <div class="land-bird">
+            <img src="/assets/hero-rooster.jpg" alt="A red and black gamefowl rooster standing in smoke against a black background" width="880" height="1173">
+            <div class="land-chip" aria-hidden="true"><b>GF-005 Apoy</b><span>Tandang, Sweater bloodline</span><em>Example record</em></div>
+          </div>
         </div>
       </header>
+
+      <section class="land-band" id="land-profile">
+        <div class="land-band-in">
+          <h2>Every bird gets a profile and a family tree.</h2>
+          <p class="land-band-sub">Add a photo, band ID, color and bloodline once. Father and mother link up, and the pedigree draws itself.</p>
+          <div class="land-band-grid">
+            <article class="land-profile">
+              <img src="/assets/yard-rooster.jpg" alt="A red gamefowl rooster standing in a yard" width="900" height="1200" loading="lazy">
+              <div class="lp-body">
+                <p class="lp-band">GF-005</p>
+                <h3>Apoy</h3>
+                <div class="facts">
+                  <div><span>Sex</span><b>Tandang</b></div>
+                  <div><span>Bloodline</span><b>Sweater</b></div>
+                  <div><span>Color</span><b>Red</b></div>
+                  <div><span>Status</span><span class="badge active">Active</span></div>
+                </div>
+              </div>
+            </article>
+            <figure class="land-ped" aria-label="Example pedigree">
+              <div class="land-frame">
+                <div class="ped">
+                  <div class="pn"><div class="pcard self"><b>GF-005</b><small>Apoy</small></div>
+                    <div class="pk">
+                      <div class="pn"><div class="pcard tandang"><b>GF-001</b><small>Bulik</small></div>
+                        <div class="pk"><div class="pn"><div class="pcard tandang"><b>GF-014</b><small>Hari</small></div></div><div class="pn"><div class="pcard inahin"><b>GF-009</b><small>Dalaga</small></div></div></div></div>
+                      <div class="pn"><div class="pcard inahin"><b>GF-003</b><small>Maya</small></div>
+                        <div class="pk"><div class="pn"><div class="pcard tandang"><b>GF-011</b><small>Bayani</small></div></div><div class="pn"><div class="pcard unk"><small>Unknown</small></div></div></div></div>
+                    </div>
+                  </div>
+                  <div class="ped-legend"><span><i style="background:var(--pine)"></i>Tandang</span><span><i style="background:var(--brass)"></i>Inahin</span></div>
+                </div>
+              </div>
+              <figcaption>Example pedigree. Every bird you add builds its own.</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
 
       <main>
         <section class="land-sec" id="land-features">
