@@ -315,6 +315,15 @@
   }
   ACT.setExpPeriod = (key) => { S.expFilter = { period: key, cat: 'all' }; redraw(); };
   ACT.setExpCat = (c) => { const f = S.expFilter || { period: 'all', cat: 'all' }; S.expFilter = { period: f.period, cat: f.cat === c ? 'all' : c }; redraw(); };
+  ACT.editPuhunan = () => openForm({
+    title: 'Set your puhunan',
+    submit: 'Save puhunan',
+    note: 'This is the money you started with. Every expense you add is taken out of it.',
+    values: { puhunan: S.data.settings.puhunan || 5000 },
+    fields: [{ name: 'puhunan', label: 'Puhunan (₱)', type: 'number', required: true }],
+    onSubmit: async (v) => { S.data.settings = await api('/settings', { method: 'PUT', body: { puhunan: v.puhunan } }); },
+    after: done('Puhunan saved.'),
+  });
   ACT.addExpense = () => expenseForm();
   ACT.editExpense = (id) => expenseForm(S.data.expenses.find((x) => x.id === id));
   ACT.deleteExpense = (id) => remove('/expenses/' + id, 'Delete this expense?', 'This cannot be undone.', 'Expense deleted.');

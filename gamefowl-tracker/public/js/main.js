@@ -41,37 +41,24 @@
 
       <section class="land-band" id="land-profile">
         <div class="land-band-in">
-          <h2>Every bird gets a profile and a family tree.</h2>
+          <h2>Every bird gets a profile and a <em>family tree.</em></h2>
           <p class="land-band-sub">Add a photo, band ID, color and bloodline once. Father and mother link up, and the pedigree draws itself.</p>
           <div class="land-band-grid">
             <article class="land-profile">
-              <img src="/assets/yard-rooster.jpg" alt="A red gamefowl rooster standing in a yard" width="900" height="1200" loading="lazy">
-              <div class="lp-body">
-                <p class="lp-band">GF-005</p>
-                <h3>Apoy</h3>
-                <div class="facts">
-                  <div><span>Sex</span><b>Tandang</b></div>
-                  <div><span>Bloodline</span><b>Sweater</b></div>
-                  <div><span>Color</span><b>Red</b></div>
-                  <div><span>Status</span><span class="badge active">Active</span></div>
-                </div>
+              <div class="land-photo">
+                <img src="/assets/yard-rooster.jpg" alt="A red and black gamefowl rooster standing on grass in a garden" width="900" height="1200" loading="lazy">
+                <span class="lp-tag">GF-005</span>
+              </div>
+              <div class="lp-facts">
+                <div><span>Sex</span><b>Tandang</b></div>
+                <div><span>Bloodline</span><b>Sweater</b></div>
+                <div><span>Color</span><b>Red</b></div>
+                <div><span>Status</span><b class="ok">&bull; Active</b></div>
               </div>
             </article>
-            <figure class="land-ped" aria-label="Example pedigree">
-              <div class="land-frame">
-                <div class="ped">
-                  <div class="pn"><div class="pcard self"><b>GF-005</b><small>Apoy</small></div>
-                    <div class="pk">
-                      <div class="pn"><div class="pcard tandang"><b>GF-001</b><small>Bulik</small></div>
-                        <div class="pk"><div class="pn"><div class="pcard tandang"><b>GF-014</b><small>Hari</small></div></div><div class="pn"><div class="pcard inahin"><b>GF-009</b><small>Dalaga</small></div></div></div></div>
-                      <div class="pn"><div class="pcard inahin"><b>GF-003</b><small>Maya</small></div>
-                        <div class="pk"><div class="pn"><div class="pcard tandang"><b>GF-011</b><small>Bayani</small></div></div><div class="pn"><div class="pcard unk"><small>Unknown</small></div></div></div></div>
-                    </div>
-                  </div>
-                  <div class="ped-legend"><span><i style="background:var(--pine)"></i>Tandang</span><span><i style="background:var(--brass)"></i>Inahin</span></div>
-                </div>
-              </div>
-              <figcaption>Example pedigree. Every bird you add builds its own.</figcaption>
+            <figure class="land-chart">
+              <img src="/assets/breeding-chart.jpg" alt="Example breeding chart: GF-005 with parents GF-001 and GF-003 and grandparents GF-014, GF-009, GF-011 and one unknown" width="1400" height="957" loading="lazy">
+              <figcaption>Example breeding chart. Every bird you add gets its own.</figcaption>
             </figure>
           </div>
         </div>

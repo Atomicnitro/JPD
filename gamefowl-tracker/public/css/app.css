@@ -789,24 +789,25 @@ details.more { border-radius: 12px; }
 .land-chip em { font-style: normal; color: var(--brass); font-size: 12.5px; font-weight: 600; margin-top: 2px; }
 
 /* Profile and pedigree band */
-.land-band { background: #0b1411; color: #e8eee9; padding: clamp(56px, 8vw, 96px) clamp(16px, 4vw, 48px); border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.land-band { background: #0b1411; color: #e8eee9; padding: clamp(56px, 8vw, 96px) clamp(16px, 4vw, 48px); border-top: 1px solid rgba(255, 255, 255, 0.06); scroll-margin-top: 0; }
 .land-band-in { max-width: 1160px; margin: 0 auto; }
 .land-band h2 { font-size: clamp(28px, 3.8vw, 40px); color: #fff; max-width: 22ch; }
+.land-band h2 em { font-style: italic; color: var(--brass); }
 .land-band-sub { margin-top: 12px; color: #a9bbb1; font-size: 17px; max-width: 56ch; }
-.land-band-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 20px; margin-top: 32px; align-items: stretch; }
-.land-profile { background: #fff; color: var(--ink); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
-.land-profile img { width: 100%; height: 280px; object-fit: cover; object-position: 30% 38%; }
-.lp-body { padding: 18px 20px 20px; }
-.lp-band { font: 600 17px var(--display); color: var(--brass-deep); }
-.lp-body h3 { font-size: 30px; margin-top: 2px; }
-.land-band .facts { margin: 14px 0 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.land-band .land-ped { margin: 0; display: flex; flex-direction: column; }
-.land-band .land-frame { flex: 1; display: grid; }
-.land-frame { padding: 10px; border-radius: 22px; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.05); }
-.land-frame .ped { margin: 0; border-radius: 14px; box-shadow: none; padding: 22px 20px; display: grid; justify-items: center; align-content: center; }
-.land-ped figcaption { margin-top: 12px; text-align: center; color: #8aa396; font-size: 13px; }
-.land-sec { scroll-margin-top: 24px; }
-.land-band { scroll-margin-top: 0; }
+.land-band-grid { display: grid; grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr); gap: 20px; margin-top: 32px; align-items: start; }
+.land-profile { background: #101c17; border: 1px solid rgba(189, 154, 69, 0.35); border-radius: 18px; overflow: hidden; }
+.land-photo { position: relative; }
+.land-profile img { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; object-position: 50% 62%; }
+.lp-tag { position: absolute; top: 12px; right: 12px; background: rgba(8, 14, 11, 0.8); border: 1px solid rgba(189, 154, 69, 0.6); color: #fff; font-weight: 700; font-size: 14px; padding: 6px 12px; border-radius: 10px; backdrop-filter: blur(6px); }
+.lp-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lp-facts div { padding: 14px 18px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.lp-facts div:nth-child(odd) { border-right: 1px solid rgba(255, 255, 255, 0.1); }
+.lp-facts span { display: block; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #8aa396; }
+.lp-facts b { display: block; font-size: 19px; color: #fff; margin-top: 2px; }
+.lp-facts .ok { color: #7be0a8; }
+.land-chart { margin: 0; }
+.land-chart img { display: block; width: 100%; height: auto; border-radius: 18px; border: 1px solid rgba(255, 255, 255, 0.12); }
+.land-chart figcaption { margin-top: 12px; text-align: center; color: #8aa396; font-size: 13px; }
 
 @media (max-width: 900px) {
   .land-links { display: none; }
@@ -814,10 +815,22 @@ details.more { border-radius: 12px; }
   .land-bird { max-width: 420px; margin-top: 8px; }
   .land-chip { left: 0; bottom: 8%; }
   .land-band-grid { grid-template-columns: minmax(0, 1fr); }
-  .land-profile img { height: 240px; }
+  .land-profile { max-width: 440px; }
 }
 @media (max-width: 520px) {
   .land-nav { padding-left: 14px; }
   .land-frame { padding: 6px; border-radius: 16px; }
   .land-band .land-ped .ped { padding: 16px 12px; }
 }
+
+/* ---------- Puhunan card ---------- */
+.puhunan { background: var(--pitch); color: #e8eee9; border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; }
+.pu-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.pu-label { display: block; font-size: 13.5px; color: #a9bbb1; }
+.pu-left { display: block; font-family: var(--display); font-weight: 600; font-size: 38px; line-height: 1.1; color: #fff; margin-top: 2px; overflow-wrap: anywhere; }
+.puhunan .bar { height: 8px; background: rgba(255, 255, 255, 0.14); border-radius: 99px; margin: 14px 0 10px; overflow: hidden; }
+.puhunan .bar i { display: block; height: 100%; background: var(--brass); border-radius: 99px; }
+.pu-line { font-size: 14px; color: #a9bbb1; }
+.puhunan.over .pu-left { color: #ffb4a8; }
+.puhunan.over .bar i { background: #e0705f; }
+.puhunan .btn.ghost { color: #fff; border-color: rgba(255, 255, 255, 0.3); background: transparent; min-height: 38px; padding: 0 14px; }

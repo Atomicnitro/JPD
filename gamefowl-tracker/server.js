@@ -44,6 +44,8 @@ async function getSettings() {
   if (error) throw error;
   const out = {};
   for (const row of data) out[row.key] = row.value;
+  // Starting money (puhunan). Stays 5000 until the admin changes it.
+  if (out.puhunan === undefined) out.puhunan = '5000';
   return out;
 }
 
@@ -389,11 +391,15 @@ app.get('/api/videos/url', auth, wrap(async (req, res) => {
 /* ------------------------------------------------------------------ */
 
 app.put('/api/settings', auth, adminOnly, wrap(async (req, res) => {
-  const allowed = ['farm_name', 'incubation_days', 'bloodlines'];
+  const allowed = ['farm_name', 'incubation_days', 'bloodlines', 'puhunan'];
   const body = req.body || {};
   if ('incubation_days' in body) {
     const n = Number(body.incubation_days);
     if (!Number.isInteger(n) || n < 15 || n > 30) throw fail(400, 'Incubation days should be a number from 15 to 30.');
+  }
+  if ('puhunan' in body) {
+    const n = Number(body.puhunan);
+    if (!Number.isFinite(n) || n < 0) throw fail(400, 'Puhunan should be a number, 0 or more.');
   }
   const rows = allowed.filter((k) => k in body).map((k) => ({ key: k, value: String(body[k] ?? '').trim() }));
   if (rows.length) {

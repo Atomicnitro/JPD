@@ -442,7 +442,18 @@
     });
 
     const top = cats[0];
+    const puhunan = Number(S.data.settings.puhunan);
+    const capital = Number.isFinite(puhunan) ? puhunan : 5000;
+    const spentAll = sum(all, 'amount');
+    const left = capital - spentAll;
+    const usedPct = capital > 0 ? Math.min(100, Math.round((spentAll / capital) * 100)) : 100;
+    const puhunanCard = `<div class="puhunan${left < 0 ? ' over' : ''}">
+        <div class="pu-top"><div><span class="pu-label">Puhunan left</span><b class="pu-left">${left < 0 ? '-' : ''}${peso(Math.abs(left))}</b></div>
+          ${S.user.role === 'admin' ? `<button class="btn ghost small" data-act="editPuhunan">Change puhunan</button>` : ''}</div>
+        <div class="bar"><i style="width:${usedPct}%"></i></div>
+        <p class="pu-line">${peso(spentAll)} spent of your ${peso(capital)} puhunan${left < 0 ? ' &middot; you are over by ' + peso(-left) : ''}</p></div>`;
     return `${head('Expenses', 'Feed, medicine, equipment and everything else you spend.', addBtn('addExpense', 'Add expense', 'brass'))}
+      ${puhunanCard}
       <div class="stats small exp-stats">
         <div class="stat"><b>${peso(thisMonth)}</b><span>Spent this month</span><em class="exp-note">${esc(vsLast)}</em></div>
         <div class="stat"><b>${peso(periodTotal)}</b><span>${{ month: 'This month', last: 'Last month', year: 'This year', all: 'All time' }[F.period]}</span><em class="exp-note">${byPeriod.length} record${byPeriod.length === 1 ? '' : 's'}</em></div>
