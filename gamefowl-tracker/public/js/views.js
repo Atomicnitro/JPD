@@ -104,6 +104,7 @@
     };
     return `
       <section class="hero">
+        <svg class="hero-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="${GT.ROOSTER_PATH}" fill="currentColor" fill-rule="evenodd"/></svg>
         <p class="hero-date">${esc(GT.longDate(t))}</p>
         <h1>${esc(S.data.settings.farm_name || 'Gamefowl Tracker')}</h1>
         <p class="hero-sub">${esc(sub)}</p>
@@ -393,7 +394,7 @@
   };
 
   /* ---------- Expenses ---------- */
-  const EXP_COLORS = ['#134430', '#c9a24d', '#3d7a8a', '#8f7022', '#5f8f76', '#a8382a', '#6b7a70', '#7a5a8a'];
+  const EXP_COLORS = ['#0f4a36', '#bd9a45', '#3d7a8a', '#8b6a4a', '#7fa58c', '#5f6f7a', '#7a5a7a', '#c48a3a'];
   const expColor = (cat) => {
     const i = (GT.CATEGORIES || []).indexOf(cat);
     return EXP_COLORS[(i < 0 ? 0 : i) % EXP_COLORS.length];
@@ -458,7 +459,7 @@
       ${list.length ? groups.map((g) => `<div class="exp-month"><h3>${esc(monthName(g.k))}</h3><span>${peso(sum(g.items, 'amount'))} &middot; ${g.items.length} record${g.items.length === 1 ? '' : 's'}</span></div>
         <div class="list">${g.items.map((x) => `<div class="row stack exp-row"><i class="exp-dot" style="background:${expColor(x.category)}"></i>
           <div class="grow"><span class="title">${esc(x.description || x.category)}</span>
-          <small>${esc(x.category)} &middot; ${fmtDate(x.date)}</small>
+          <small>${x.description ? esc(x.category) + ' &middot; ' : ''}${fmtDate(x.date)}</small>
           <div class="row-actions">${smallBtn('editExpense', 'Edit', x.id)}${smallBtn('deleteExpense', 'Delete', x.id, 'danger')}</div></div>
           <span class="end"><b>${peso(x.amount)}</b></span></div>`).join('')}</div>`).join('')
         + (cat !== 'all' || F.period !== 'all' ? `<p class="muted exp-foot">Showing ${list.length} record${list.length === 1 ? '' : 's'} totalling ${peso(shownTotal)}.</p>` : '')

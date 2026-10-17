@@ -6,19 +6,104 @@
 
   const app = $('#app');
 
+  /* ---------- Landing page (shown before login) ---------- */
+  function showLanding() {
+    const feat = (ic, title, text) => `<li>${icon(ic)}<div><h3>${title}</h3><p>${text}</p></div></li>`;
+    const step = (n, title, text) => `<li><span class="flow-n">${n}</span><div><h3>${title}</h3><p>${text}</p></div></li>`;
+    app.innerHTML = `<div class="land">
+      <header class="land-hero">
+        <svg class="land-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="${GT.ROOSTER_PATH}" fill="currentColor" fill-rule="evenodd"/></svg>
+        <nav class="land-nav" aria-label="Site">
+          <a class="land-brand" href="#/"><span class="brand-logo"><img src="/assets/logo-128.png" alt=""></span><b>Gamefowl Tracker</b></a>
+          <a class="btn dark" href="#/login">Log in</a>
+        </nav>
+        <div class="land-hero-grid">
+          <div class="land-copy">
+            <h1>Every bird, pair and peso in one place.</h1>
+            <p class="land-lead">A private record book for Philippine gamefowl breeders. Keep pedigree, hatches, training, derbies, sales and expenses together, and check them from your phone at the pens.</p>
+            <div class="land-cta">
+              <a class="btn brass" href="#/login">Log in</a>
+              <button class="btn dark" type="button" data-scroll="land-features">See what it tracks</button>
+            </div>
+            <p class="land-note">Made for one farm and its staff. Ask your admin for an account.</p>
+          </div>
+          <figure class="land-ped" aria-label="Example pedigree">
+            <div class="ped">
+              <div class="pn"><div class="pcard self"><b>GF-005</b><small>Apoy</small></div>
+                <div class="pk">
+                  <div class="pn"><div class="pcard tandang"><b>GF-001</b><small>Bulik</small></div>
+                    <div class="pk"><div class="pn"><div class="pcard tandang"><b>GF-014</b><small>Hari</small></div></div><div class="pn"><div class="pcard inahin"><b>GF-009</b><small>Dalaga</small></div></div></div></div>
+                  <div class="pn"><div class="pcard inahin"><b>GF-003</b><small>Maya</small></div>
+                    <div class="pk"><div class="pn"><div class="pcard tandang"><b>GF-011</b><small>Bayani</small></div></div><div class="pn"><div class="pcard unk"><small>Unknown</small></div></div></div></div>
+                </div>
+              </div>
+              <div class="ped-legend"><span><i style="background:var(--pine)"></i>Tandang</span><span><i style="background:var(--brass)"></i>Inahin</span></div>
+            </div>
+            <figcaption>Example pedigree. Every bird you add builds its own.</figcaption>
+          </figure>
+        </div>
+      </header>
+
+      <main>
+        <section class="land-sec" id="land-features">
+          <h2>What it keeps track of</h2>
+          <ul class="land-feats">
+            ${feat('bird', 'Birds and pedigree', 'Band ID, photo, color, bloodline and status for every bird, with father and mother linked so the family tree shows itself.')}
+            ${feat('pairs', 'Pairs and hatch records', 'Pair a tandang with an inahin, log each clutch and see the hatch rate of every pair.')}
+            ${feat('incubator', 'Incubator countdown', 'See how many eggs are set, which incubator they are in and how many days are left until the hatch.')}
+            ${feat('dumbbell', 'Training and derbies', 'Log training sessions and weights, record fight results and add notes to derby videos.')}
+            ${feat('tag', 'Sales and expenses', 'Record each sale and every peso spent on feed, vitamins, medicine and equipment, and see the net income.')}
+            ${feat('chart', 'Reports and downloads', 'Pick a week, month or year to see the numbers, then download your records as CSV files.')}
+          </ul>
+        </section>
+
+        <section class="land-sec land-flow">
+          <h2>Record once, and it connects</h2>
+          <p class="land-sub">Chicks you register from a hatch are linked to their parents automatically, so pedigree grows with every hatch.</p>
+          <ol class="flow">
+            ${step(1, 'Add your birds', 'Tandang and inahin, with photos and bloodline.')}
+            ${step(2, 'Create a pair', 'Pick the cock and hen you are breeding.')}
+            ${step(3, 'Set the eggs', 'Choose the incubator and date. The hatch date is worked out for you.')}
+            ${step(4, 'Record the hatch', 'Enter how many eggs hatched.')}
+            ${step(5, 'Register the chicks', 'Parents are filled in, and the family tree updates.')}
+          </ol>
+        </section>
+
+        <section class="land-end">
+          <h2>Ready to log today's records?</h2>
+          <a class="btn brass" href="#/login">Log in</a>
+        </section>
+      </main>
+      <footer class="land-foot"><span>Created by <b>Juan Paolo Dente</b></span></footer>
+    </div>`;
+    const go = app.querySelector('[data-scroll]');
+    if (go) go.addEventListener('click', () => {
+      const el = document.getElementById(go.dataset.scroll);
+      if (el) el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    });
+    window.scrollTo(0, 0);
+  }
+
   /* ---------- Login ---------- */
   function showLogin(message) {
-    app.innerHTML = `<main class="login"><div class="login-card">
-      <div class="login-logo"><img src="/assets/logo-512.png" alt="Gamefowl Tracker logo" width="156" height="156"></div>
-      <h1>Gamefowl Tracker</h1>
-      <p class="tag">Breeding, hatch, sales and expense records.</p>
-      <form id="loginForm" novalidate>
-        <div><label for="email">Email</label><input id="email" type="email" autocomplete="username" inputmode="email" autocapitalize="none" required></div>
-        <div><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required></div>
-        <p class="err" id="loginErr" ${message ? '' : 'hidden'}>${esc(message || '')}</p>
-        <button class="btn brass" type="submit">Log in</button>
-      </form>
-      <p class="credit-login">Created by <b>Juan Paolo Dente</b></p></div></main>`;
+    app.innerHTML = `<main class="login">
+      <section class="login-brand">
+        <div class="login-logo"><img src="/assets/logo-512.png" alt="Gamefowl Tracker logo" width="156" height="156"></div>
+        <h1>Gamefowl Tracker</h1>
+        <p class="tag">Birds, pairs, hatches, sales and expenses in one place.</p>
+        <p class="credit-login">Created by <b>Juan Paolo Dente</b></p>
+      </section>
+      <section class="login-panel">
+        <form id="loginForm" class="login-form" novalidate>
+          <a class="login-back" href="#/">${icon('back')}Back to home</a>
+          <h2>Log in</h2>
+          <p class="login-sub">Use the email and password your admin gave you.</p>
+          <div><label for="email">Email</label><input id="email" type="email" autocomplete="username" inputmode="email" autocapitalize="none" required></div>
+          <div><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required></div>
+          <p class="err" id="loginErr" ${message ? '' : 'hidden'}>${esc(message || '')}</p>
+          <button class="btn" type="submit">Log in</button>
+        </form>
+      </section></main>`;
     $('#loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = $('button', e.target);
@@ -41,7 +126,11 @@
       }
     });
   }
-  GT.onLoggedOut = () => showLogin();
+  GT.onLoggedOut = () => { if (location.hash !== '#/login') history.replaceState(null, '', '#/login'); showLogin(); };
+  window.addEventListener('hashchange', () => {
+    if (S.token) return;
+    if (location.hash === '#/login') showLogin(); else showLanding();
+  });
 
   /* ---------- Shell ---------- */
   const NAV = [
@@ -68,7 +157,7 @@
       <aside class="side">
         <a class="brand" href="#/"><span class="brand-logo"><img src="/assets/logo-128.png" alt=""></span><span><b>Gamefowl<br>Tracker</b></span></a>
         <nav class="nav" aria-label="Main">
-          ${NAV.map(([key, href, ic, label]) => `<a href="${href}" data-nav="${key}">${icon(ic)}${label}</a>${key === 'birds' ? `<div class="sub">
+          ${NAV.map(([key, href, ic, label]) => `<a href="${href}" data-nav="${key}">${icon(ic)}${label}</a>${['home', 'incubator', 'derbies'].includes(key) ? '<div class="gap"></div>' : ''}${key === 'birds' ? `<div class="sub">
               <a href="#/birds" data-sub="">All birds</a><a href="#/birds?sex=tandang" data-sub="tandang">Tandang</a>
               <a href="#/birds?sex=inahin" data-sub="inahin">Inahin</a><a href="#/birds?sex=sisiw" data-sub="sisiw">Sisiw</a></div>` : ''}`).join('')}
           <div class="gap"></div>
@@ -166,6 +255,7 @@
   window.addEventListener('hashchange', () => { GT.keepScroll = false; baseRender(); });
 
   function startApp() {
+    if (location.hash === '#/login') history.replaceState(null, '', '#/');
     renderShell();
     baseRender();
     GT.api('/videos/limit').then((r) => { GT.videoMB = r.mb; }).catch(() => {});
@@ -174,11 +264,12 @@
   /* ---------- Start ---------- */
   (async function boot() {
     GT.restoreSession();
-    if (!S.token) return showLogin();
+    if (!S.token) return location.hash === '#/login' ? showLogin() : showLanding();
     try {
       await GT.load();
       startApp();
     } catch (e) {
+      if (location.hash !== '#/login') history.replaceState(null, '', '#/login');
       showLogin(e.message && !/log in/i.test(e.message) ? e.message : '');
     }
   })();
