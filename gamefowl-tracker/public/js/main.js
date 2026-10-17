@@ -12,32 +12,39 @@
     const step = (n, title, text) => `<li><span class="flow-n">${n}</span><div><h3>${title}</h3><p>${text}</p></div></li>`;
     app.innerHTML = `<div class="land">
       <header class="land-hero">
-        <svg class="land-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="${GT.ROOSTER_PATH}" fill="currentColor" fill-rule="evenodd"/></svg>
         <nav class="land-nav" aria-label="Site">
           <a class="land-brand" href="#/"><span class="brand-logo"><img src="/assets/logo-128.png" alt=""></span><b>Gamefowl Tracker</b></a>
-          <a class="btn dark" href="#/login">Log in</a>
-        </nav>
-        <div class="land-hero-grid">
-          <div class="land-copy">
-            <h1>Every bird, pair and peso in one place.</h1>
-            <p class="land-lead">A private record book for Philippine gamefowl breeders. Keep pedigree, hatches, training, derbies, sales and expenses together, and check them from your phone at the pens.</p>
-            <div class="land-cta">
-              <a class="btn brass" href="#/login">Log in</a>
-              <button class="btn dark" type="button" data-scroll="land-features">See what it tracks</button>
-            </div>
-            <p class="land-note">Made for one farm and its staff. Ask your admin for an account.</p>
+          <div class="land-links">
+            <button type="button" data-scroll="land-features">What it tracks</button>
+            <button type="button" data-scroll="land-flow">How it connects</button>
           </div>
+          <a class="land-login" href="#/login">Log in</a>
+        </nav>
+        <div class="land-copy">
+          <p class="land-badge"><i></i>Private record book for gamefowl breeders</p>
+          <h1>Every bird, pair and peso in one place.</h1>
+          <p class="land-lead">Keep pedigree, hatches, training, derbies, sales and expenses together, and check them from your phone at the pens.</p>
+          <div class="land-cta">
+            <a class="btn brass" href="#/login">Log in</a>
+            <button class="btn dark" type="button" data-scroll="land-features">See what it tracks</button>
+          </div>
+          <p class="land-note">Made for one farm and its staff. Ask your admin for an account.</p>
+        </div>
+        <div class="land-stage">
+          <div class="land-rays" aria-hidden="true"></div>
           <figure class="land-ped" aria-label="Example pedigree">
-            <div class="ped">
-              <div class="pn"><div class="pcard self"><b>GF-005</b><small>Apoy</small></div>
-                <div class="pk">
-                  <div class="pn"><div class="pcard tandang"><b>GF-001</b><small>Bulik</small></div>
-                    <div class="pk"><div class="pn"><div class="pcard tandang"><b>GF-014</b><small>Hari</small></div></div><div class="pn"><div class="pcard inahin"><b>GF-009</b><small>Dalaga</small></div></div></div></div>
-                  <div class="pn"><div class="pcard inahin"><b>GF-003</b><small>Maya</small></div>
-                    <div class="pk"><div class="pn"><div class="pcard tandang"><b>GF-011</b><small>Bayani</small></div></div><div class="pn"><div class="pcard unk"><small>Unknown</small></div></div></div></div>
+            <div class="land-frame">
+              <div class="ped">
+                <div class="pn"><div class="pcard self"><b>GF-005</b><small>Apoy</small></div>
+                  <div class="pk">
+                    <div class="pn"><div class="pcard tandang"><b>GF-001</b><small>Bulik</small></div>
+                      <div class="pk"><div class="pn"><div class="pcard tandang"><b>GF-014</b><small>Hari</small></div></div><div class="pn"><div class="pcard inahin"><b>GF-009</b><small>Dalaga</small></div></div></div></div>
+                    <div class="pn"><div class="pcard inahin"><b>GF-003</b><small>Maya</small></div>
+                      <div class="pk"><div class="pn"><div class="pcard tandang"><b>GF-011</b><small>Bayani</small></div></div><div class="pn"><div class="pcard unk"><small>Unknown</small></div></div></div></div>
+                  </div>
                 </div>
+                <div class="ped-legend"><span><i style="background:var(--pine)"></i>Tandang</span><span><i style="background:var(--brass)"></i>Inahin</span></div>
               </div>
-              <div class="ped-legend"><span><i style="background:var(--pine)"></i>Tandang</span><span><i style="background:var(--brass)"></i>Inahin</span></div>
             </div>
             <figcaption>Example pedigree. Every bird you add builds its own.</figcaption>
           </figure>
@@ -57,7 +64,7 @@
           </ul>
         </section>
 
-        <section class="land-sec land-flow">
+        <section class="land-sec land-flow" id="land-flow">
           <h2>Record once, and it connects</h2>
           <p class="land-sub">Chicks you register from a hatch are linked to their parents automatically, so pedigree grows with every hatch.</p>
           <ol class="flow">
@@ -76,11 +83,10 @@
       </main>
       <footer class="land-foot"><span>Created by <b>Juan Paolo Dente</b></span></footer>
     </div>`;
-    const go = app.querySelector('[data-scroll]');
-    if (go) go.addEventListener('click', () => {
+    app.querySelectorAll('[data-scroll]').forEach((go) => go.addEventListener('click', () => {
       const el = document.getElementById(go.dataset.scroll);
       if (el) el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-    });
+    }));
     window.scrollTo(0, 0);
   }
 
